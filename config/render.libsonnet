@@ -418,9 +418,13 @@ local render(customer) =
           else converted
           for statement in policy.statements
         ] + (
-          if suffix == 'net' then [
-            '%s to manage network-security-groups in compartment cmp-lz-%s-network' %
-            [runner_principal, std.asciiLower(environment)],
+          if suffix == 'project' then [
+            '%s to manage network-security-groups in compartment cmp-lz-%s-%s' %
+            [
+              runner_principal,
+              std.asciiLower(environment),
+              std.asciiLower(project),
+            ],
           ] else []
         ),
       };
