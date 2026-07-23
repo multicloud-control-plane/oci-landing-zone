@@ -5,6 +5,9 @@
 // makes those additions normal, repeatable Landing Zone changes.
 {
   notification_email: 'david.gutierrez.colodra@oracle.com',
+  // OCI assigns this address when the OP03 Bastion is created. Keep it null
+  // until then so the generated network contains no example SSH source.
+  platform_bastion_private_endpoint_cidr: '10.200.1.213/32',
   // OP01 uses this list to render security and observability controls. During
   // initial installation OP01 remains in its core stage until DEV OP02 exists.
   // Add later environments here only after their OP02 state exists.
