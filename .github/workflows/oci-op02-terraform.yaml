@@ -156,6 +156,18 @@ jobs:
           jq '{tags: .tags}' \
             "$RUNNER_TEMP/op01-governance.json" \
             > "$RUNNER_TEMP/tags-dependency.json"
+          jq -n \
+            --arg compartments \
+              "$RUNNER_TEMP/compartments-dependency.json" \
+            --arg network \
+              "$RUNNER_TEMP/network-dependency.json" \
+            --arg tags \
+              "$RUNNER_TEMP/tags-dependency.json" \
+            '{
+              compartments_dependency: $compartments,
+              network_dependency: $network,
+              tags_dependency: $tags
+            }' > "$RUNNER_TEMP/op02-dependencies.tfvars.json"
           drg_route_table_id="$(
             jq -er '
               [
@@ -278,11 +290,9 @@ jobs:
           terraform -chdir="$GITHUB_WORKSPACE/ORCH" plan \
             -input=false -no-color \
             -var-file="$RUNNER_TEMP/oci-credentials.tfvars.json" \
+            -var-file="$RUNNER_TEMP/op02-dependencies.tfvars.json" \
             -var-file="$GITHUB_WORKSPACE/request/$OP02_ROOT/generated/iam.json" \
             -var-file="$RUNNER_TEMP/op02-network.json" \
-            -var="compartments_dependency=$RUNNER_TEMP/compartments-dependency.json" \
-            -var="network_dependency=$RUNNER_TEMP/network-dependency.json" \
-            -var="tags_dependency=$RUNNER_TEMP/tags-dependency.json" \
             -var="output_path=$RUNNER_TEMP/op02-output" \
             -out="$RUNNER_TEMP/op02.tfplan"
 

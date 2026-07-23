@@ -257,6 +257,11 @@ jobs:
               .compartments += ($item.compartments // {})
             )
           ' "${output_files[@]}" > "$RUNNER_TEMP/op02-compartments.json"
+          jq -n \
+            --arg compartments \
+              "$RUNNER_TEMP/op02-compartments.json" \
+            '{compartments_dependency: $compartments}' \
+            > "$RUNNER_TEMP/op01-dependencies.tfvars.json"
 
       - name: Initialize and plan OP01
         shell: bash
@@ -283,7 +288,7 @@ jobs:
           )
           if [ "$OP01_STAGE" != "core" ]; then
             arguments+=(
-              "-var=compartments_dependency=$RUNNER_TEMP/op02-compartments.json"
+              "-var-file=$RUNNER_TEMP/op01-dependencies.tfvars.json"
             )
           fi
           for file in "${files[@]}"; do
