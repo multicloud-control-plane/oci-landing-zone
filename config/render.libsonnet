@@ -428,6 +428,12 @@ local render(customer) =
               std.asciiLower(environment),
               std.asciiLower(project),
             ],
+          ] else if suffix == 'net' then [
+            "%s to manage vcns in compartment cmp-lz-%s-network where any {request.operation = 'CreateNetworkSecurityGroup', request.operation = 'DeleteNetworkSecurityGroup'}" %
+            [
+              runner_principal,
+              std.asciiLower(environment),
+            ],
           ] else []
         ),
       };
