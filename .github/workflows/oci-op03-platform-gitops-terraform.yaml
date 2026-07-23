@@ -172,6 +172,15 @@ jobs:
           jq '{network_resources: .}' \
             "$RUNNER_TEMP/op01-network.json" \
             > "$RUNNER_TEMP/network-dependency.json"
+          jq -n \
+            --arg compartments \
+              "$RUNNER_TEMP/compartments-dependency.json" \
+            --arg network \
+              "$RUNNER_TEMP/network-dependency.json" \
+            '{
+              compartments_dependency: $compartments,
+              network_dependency: $network
+            }' > "$RUNNER_TEMP/op03-dependencies.tfvars.json"
 
       - name: Configure Instance Principal and OP03 state
         shell: bash
@@ -266,10 +275,9 @@ jobs:
           terraform -chdir="$GITHUB_WORKSPACE/ORCH" validate -no-color
           arguments=(
             "-var-file=$RUNNER_TEMP/oci-credentials.tfvars.json"
+            "-var-file=$RUNNER_TEMP/op03-dependencies.tfvars.json"
             "-var-file=$GITHUB_WORKSPACE/request/op03_manage_platform_gitops/configuration/identity.json"
             "-var-file=$GITHUB_WORKSPACE/request/op03_manage_platform_gitops/configuration/runner.json"
-            "-var=compartments_dependency=$RUNNER_TEMP/compartments-dependency.json"
-            "-var=network_dependency=$RUNNER_TEMP/network-dependency.json"
             "-var=output_path=$RUNNER_TEMP/op03-output"
           )
           if [ "$OP03_STAGE" = "identity" ]; then

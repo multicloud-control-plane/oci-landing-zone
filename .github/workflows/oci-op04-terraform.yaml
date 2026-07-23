@@ -255,6 +255,15 @@ jobs:
           jq '{compartments: .compartments}' \
             "$RUNNER_TEMP/op02-iam.json" \
             > "$RUNNER_TEMP/compartments-dependency.json"
+          jq -n \
+            --arg identity_domains \
+              "$RUNNER_TEMP/identity-domains-dependency.json" \
+            --arg compartments \
+              "$RUNNER_TEMP/compartments-dependency.json" \
+            '{
+              identity_domains_dependency: $identity_domains,
+              compartments_dependency: $compartments
+            }' > "$RUNNER_TEMP/op04-dependencies.tfvars.json"
 
       - name: Configure Instance Principal and OP04 state
         shell: bash
@@ -350,9 +359,8 @@ jobs:
           terraform -chdir="$GITHUB_WORKSPACE/ORCH" plan \
             -input=false -no-color \
             -var-file="$RUNNER_TEMP/oci-credentials.tfvars.json" \
+            -var-file="$RUNNER_TEMP/op04-dependencies.tfvars.json" \
             -var-file="$GITHUB_WORKSPACE/request/$OP04_ROOT/generated/iam.json" \
-            -var="identity_domains_dependency=$RUNNER_TEMP/identity-domains-dependency.json" \
-            -var="compartments_dependency=$RUNNER_TEMP/compartments-dependency.json" \
             -var="output_path=$RUNNER_TEMP/op04-output" \
             -out="$RUNNER_TEMP/op04.tfplan"
 
