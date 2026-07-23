@@ -1,5 +1,5 @@
 {
   "contract_version": 1,
-  "stage": "infrastructure",
+  "stage": "identity",
   "enabled": true
 }
