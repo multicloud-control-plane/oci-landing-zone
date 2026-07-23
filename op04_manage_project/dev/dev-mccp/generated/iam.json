@@ -61,7 +61,7 @@
             ]
          },
          "PCY-LZ-DEV-MCCP-ADMIN-KEY-GITOPS": {
-            "compartment_id": "CMP-LZ-DEV-MCCP-KEY",
+            "compartment_id": "CMP-LZ-DEV-PROJECTS-KEY",
             "description": "GitOps equivalent of the pinned OE project policy.",
             "name": "pcy-lz-dev-mccp-admin-gitops",
             "statements": [
@@ -111,7 +111,7 @@
             ]
          },
          "PCY-LZ-DEV-MCCP-ADMIN-NET-KEY-GITOPS": {
-            "compartment_id": "CMP-LZ-DEV-NETWORK-KEY",
+            "compartment_id": "CMP-LZ-DEV-KEY",
             "description": "GitOps equivalent of the pinned OE project policy.",
             "name": "pcy-lz-dev-mccp-admin-net-gitops",
             "statements": [
@@ -135,7 +135,7 @@
             ]
          },
          "PCY-LZ-DEV-MCCP-ADMIN-SEC-KEY-GITOPS": {
-            "compartment_id": "CMP-LZ-DEV-SECURITY-KEY",
+            "compartment_id": "CMP-LZ-DEV-KEY",
             "description": "GitOps equivalent of the pinned OE project policy.",
             "name": "pcy-lz-dev-mccp-admin-sec-gitops",
             "statements": [
