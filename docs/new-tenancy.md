@@ -351,10 +351,17 @@ approval, merge, and verify the apply before continuing:
 8. Create its restricted OCI Bastion, record the assigned private endpoint
    `/32` in `platform_bastion_private_endpoint_cidr`, and apply the focused
    OP01 network update described below.
-9. Validate and register the new private runner, replace the OP03 identity
-   placeholders, and move OP03 to `"stage": "identity"`.
-10. Add one project name to `config/projects.json`, generate
+9. Replace the OP03 identity placeholders, move OP03 to
+   `"stage": "identity"`, and apply the focused identity request with the
+   foundation runner.
+10. Validate the new private runner and its Instance Principal identity. On a
+    paid GitHub plan, it can now be registered in a repository-restricted
+    organization runner group. On GitHub Free, leave it unregistered until the
+    project repository exists.
+11. Add one project name to `config/projects.json`, generate
    `op04:<environment>-<project>`, and submit the two-file OP04 request.
+12. Create and hand off the project repository. On GitHub Free, register the
+    runner to that repository only; do not register it at organization scope.
 
 ### Configure private access to the OP03 runner
 
@@ -395,6 +402,22 @@ request. The plan must replace only the Hub management SSH rule source, apart
 from documented Orchestrator output files and the known Service Connector
 normalization. Do not use OE's generated host-offset example or a subnet-wide
 SSH source. With a `null` value, the adapter omits the example rule entirely.
+
+After the OP03 identity apply, connect through a short-lived managed SSH
+session and verify `cloud-init status --wait`, `rg --version`,
+`python3.11 --version`, `python3.11 -m pip --version`, the runner version as
+`github-runner`, Oracle Cloud Agent, SSH, outbound HTTPS to GitHub, the exact
+Instance Principal tenancy identity, and read-only access to the private
+versioned state bucket.
+
+Registration follows the GitHub plan. Paid plans should put the runner in a
+repository-restricted organization runner group. GitHub Free private
+repositories must use repository-scoped registration after OP04 and handoff
+have created the target repository. Generate the short-lived token from that
+repository's **Settings → Actions → Runners → New self-hosted runner** page,
+register as `github-runner`, and apply only the labels declared by that
+repository's protected `control-plane.json`. Never paste the token into a
+ticket, pull request, chat, shell history, or committed file.
 
 OP04 uses the official OE `v3.1.0` project model: one project compartment,
 one administrator group, and the OE policies. The MCPP runner policies are the
