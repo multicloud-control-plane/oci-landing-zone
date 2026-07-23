@@ -1,5 +1,5 @@
 {
   "contract_version": 1,
-  "enabled": false,
+  "enabled": true,
   "stage": "infrastructure"
 }
