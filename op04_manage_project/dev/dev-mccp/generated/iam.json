@@ -118,7 +118,8 @@
                "allow dynamic-group dg-mccp-platform-runner to use virtual-network-family in compartment cmp-lz-dev-network",
                "allow dynamic-group dg-mccp-platform-runner to use subnets in compartment cmp-lz-dev-network",
                "allow dynamic-group dg-mccp-platform-runner to use vnics in compartment cmp-lz-dev-network",
-               "allow dynamic-group dg-mccp-platform-runner to manage private-ips in compartment cmp-lz-dev-network"
+               "allow dynamic-group dg-mccp-platform-runner to manage private-ips in compartment cmp-lz-dev-network",
+               "allow dynamic-group dg-mccp-platform-runner to manage vcns in compartment cmp-lz-dev-network where any {request.operation = 'CreateNetworkSecurityGroup', request.operation = 'DeleteNetworkSecurityGroup'}"
             ]
          },
          "PCY-LZ-DEV-MCCP-ADMIN-SEC-KEY": {
