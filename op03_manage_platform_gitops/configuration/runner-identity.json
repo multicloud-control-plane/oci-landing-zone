@@ -17,8 +17,8 @@
         "name": "pcy-mccp-platform-runner-state",
         "statements": [
           "allow dynamic-group dg-mccp-platform-runner to read objectstorage-namespaces in tenancy",
-          "allow dynamic-group dg-mccp-platform-runner to read buckets in tenancy where target.bucket.name = 'mccp-oci-lz-tfstate'",
-          "allow dynamic-group dg-mccp-platform-runner to manage objects in tenancy where target.bucket.name = 'mccp-oci-lz-tfstate'"
+          "allow dynamic-group dg-mccp-platform-runner to read buckets in tenancy where target.bucket.name = 'mccp-project-tfstate'",
+          "allow dynamic-group dg-mccp-platform-runner to manage objects in tenancy where target.bucket.name = 'mccp-project-tfstate'"
         ]
       }
     }
