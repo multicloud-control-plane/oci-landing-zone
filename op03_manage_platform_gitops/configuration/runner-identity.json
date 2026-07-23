@@ -3,7 +3,7 @@
     "dynamic_groups": {
       "DG-MCCP-PLATFORM-RUNNER-KEY": {
         "description": "Exact OCI instance used by the Multi-Cloud Control Plane",
-        "matching_rule": "ALL {instance.id = '__PLATFORM_RUNNER_INSTANCE_OCID__'}",
+        "matching_rule": "ALL {instance.id = 'ocid1.instance.oc1.eu-frankfurt-1.antheljr2vk6mfac4zzxh254xv5tew3z33ste5icwo4d3msros3din74fbta'}",
         "name": "dg-mccp-platform-runner"
       }
     }
@@ -17,8 +17,8 @@
         "name": "pcy-mccp-platform-runner-state",
         "statements": [
           "allow dynamic-group dg-mccp-platform-runner to read objectstorage-namespaces in tenancy",
-          "allow dynamic-group dg-mccp-platform-runner to read buckets in tenancy where target.bucket.name = '__STATE_BUCKET_NAME__'",
-          "allow dynamic-group dg-mccp-platform-runner to manage objects in tenancy where target.bucket.name = '__STATE_BUCKET_NAME__'"
+          "allow dynamic-group dg-mccp-platform-runner to read buckets in tenancy where target.bucket.name = 'mccp-oci-lz-tfstate'",
+          "allow dynamic-group dg-mccp-platform-runner to manage objects in tenancy where target.bucket.name = 'mccp-oci-lz-tfstate'"
         ]
       }
     }
