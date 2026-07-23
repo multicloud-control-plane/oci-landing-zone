@@ -1,5 +1,5 @@
 {
-  "dev": [],
+  "dev": ["mccp"],
   "test": [],
   "uat": [],
   "prod": []
