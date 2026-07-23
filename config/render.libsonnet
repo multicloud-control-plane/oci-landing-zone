@@ -407,6 +407,9 @@ local render(customer) =
       [std.asciiLower(environment), std.asciiLower(project)];
     local runner_policy(policy, suffix) =
       policy {
+        compartment_id:
+          if suffix == 'project' then project_container_key
+          else environment_key,
         name: policy.name + '-gitops',
         description:
           'GitOps equivalent of the pinned OE project policy.',
