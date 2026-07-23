@@ -1,0 +1,63 @@
+{
+  "compartments": {
+    "network": {
+      "key": "CMP-LZ-DEV-NETWORK-KEY",
+      "ocid": "ocid1.compartment.oc1..aaaaaaaakafky4gueaup3l3zgivdx2ukgs4v6ej2dsjn56ka7dh6n42vnmcq"
+    },
+    "projects": {
+      "key": "CMP-LZ-DEV-PROJECTS-KEY",
+      "ocid": "ocid1.compartment.oc1..aaaaaaaae4yepgdgaxp35fiqtzbli5qjlvreswjq4enxvel5is3majrfmscq"
+    },
+    "security": {
+      "key": "CMP-LZ-DEV-SECURITY-KEY",
+      "ocid": "ocid1.compartment.oc1..aaaaaaaarmuvn2g2fqduh5ryci3p5tvqf3pivdjnceitznicj276ljvzqvxq"
+    }
+  },
+  "environment": "dev",
+  "network": {
+    "subnets": {
+      "app": {
+        "cidr": "10.200.65.0/24",
+        "key": "SN-FRA-LZ-DEV-APP-KEY",
+        "name": "sn-fra-lz-dev-app",
+        "ocid": "ocid1.subnet.oc1.eu-frankfurt-1.aaaaaaaaraib2rhhf6wercpy676646s67qqhl4u2vzdu5oyygo7r6jmmbtqq"
+      },
+      "database": {
+        "cidr": "10.200.66.0/24",
+        "key": "SN-FRA-LZ-DEV-DB-KEY",
+        "name": "sn-fra-lz-dev-db",
+        "ocid": "ocid1.subnet.oc1.eu-frankfurt-1.aaaaaaaa6czrjkgtlw7zhtcthpzrlsnejuedqqtzaod7dexh7gzyinroxvua"
+      },
+      "infrastructure": {
+        "cidr": "10.200.67.0/24",
+        "key": "SN-FRA-LZ-DEV-INFRA-KEY",
+        "name": "sn-fra-lz-dev-infra",
+        "ocid": "ocid1.subnet.oc1.eu-frankfurt-1.aaaaaaaa4ibokdqtj4vzcqndxcry5l2gslvp5opyh3mj2b6ydjlpg7rsqtsa"
+      },
+      "web": {
+        "cidr": "10.200.64.0/24",
+        "key": "SN-FRA-LZ-DEV-WEB-KEY",
+        "name": "sn-fra-lz-dev-web",
+        "ocid": "ocid1.subnet.oc1.eu-frankfurt-1.aaaaaaaaipheohfibk5wtt4lv4vabjokysugwym4e44qxyzj2fgv6h4b7oaq"
+      }
+    },
+    "vcn": {
+      "cidr": "10.200.64.0/21",
+      "key": "VCN-FRA-LZ-DEV-PROJECTS-KEY",
+      "name": "vcn-fra-lz-dev-projects",
+      "ocid": "ocid1.vcn.oc1.eu-frankfurt-1.amaaaaaa2vk6mfaa66peesmevcsylfuzosxq2ccwnybqgel7llyc54ijppga"
+    }
+  },
+  "op02_state_key": "op02_manage_environment/dev/terraform.tfstate",
+  "parent_compartment_key": "CMP-LZ-DEV-PROJECTS-KEY",
+  "parent_compartment_ocid": "ocid1.compartment.oc1..aaaaaaaae4yepgdgaxp35fiqtzbli5qjlvreswjq4enxvel5is3majrfmscq",
+  "region": "eu-frankfurt-1",
+  "schema_version": 2,
+  "source": {
+    "commit_sha": "b91a03bad9e1ca688d0e1e0f07e240149f0d5c8c",
+    "repository": "multicloud-control-plane/mccp-cloudops-lz",
+    "run_id": "30006088768",
+    "workflow": "oci-op02-terraform.yaml"
+  },
+  "tenancy_ocid": "ocid1.tenancy.oc1..aaaaaaaacgomiinzmfduoro47jiq5byg2urp7rk7wgxs74gfqczvj6yau3sq"
+}
