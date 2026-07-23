@@ -24,7 +24,7 @@
                            "display_name": "drgrd-fra-lz-hub",
                            "distribution_type": "IMPORT",
                            "statements": {
-                              "ROUTE-ALL-VCNS-KEY": {
+                              "DRGRDS-FRA-LZ-HUB-ALL-VCNS-KEY": {
                                  "action": "ACCEPT",
                                  "match_criteria": {
                                     "attachment_type": "VCN",
@@ -38,7 +38,7 @@
                            "display_name": "drgrd-fra-lz-spoke",
                            "distribution_type": "IMPORT",
                            "statements": {
-                              "ROUTE-ALL-VCNS-KEY": {
+                              "DRGRDS-FRA-LZ-SPOKE-ALL-VCNS-KEY": {
                                  "action": "ACCEPT",
                                  "match_criteria": {
                                     "attachment_type": "VCN",
