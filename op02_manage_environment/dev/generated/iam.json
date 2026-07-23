@@ -1,0 +1,36 @@
+{
+   "compartments_configuration": {
+      "compartments": {
+         "CMP-LZ-DEV-KEY": {
+            "children": {
+               "CMP-LZ-DEV-NETWORK-KEY": {
+                  "defined_tags": {
+                     "tagns-lz-role.tag-lz-role": "lz-network-admin"
+                  },
+                  "description": "Dev Workload Environment, Common Network Compartment",
+                  "name": "cmp-lz-dev-network"
+               },
+               "CMP-LZ-DEV-PLATFORM-KEY": {
+                  "description": "Dev Workload Environment, Common Platform Compartment",
+                  "name": "cmp-lz-dev-platform"
+               },
+               "CMP-LZ-DEV-PROJECTS-KEY": {
+                  "description": "Dev Workload Environment, Common Projects Compartment",
+                  "name": "cmp-lz-dev-projects"
+               },
+               "CMP-LZ-DEV-SECURITY-KEY": {
+                  "defined_tags": {
+                     "tagns-lz-role.tag-lz-role": "lz-security-admin"
+                  },
+                  "description": "Dev Workload Environment, Common Security Compartment",
+                  "name": "cmp-lz-dev-security"
+               }
+            },
+            "description": "Dev Environment Compartment",
+            "name": "cmp-lz-dev",
+            "parent_id": "CMP-LANDINGZONE-KEY"
+         }
+      },
+      "enable_delete": "true"
+   }
+}

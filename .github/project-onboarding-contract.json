@@ -1,0 +1,33 @@
+{
+  "contract_version": 3,
+  "project_slug_pattern": "^(?:dev|test|uat|prod)-[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+  "project_name_max_length": 30,
+  "same_slug_repository": false,
+  "allowed_environments": ["dev", "test", "uat", "prod"],
+  "environment_blueprints": {
+    "dev": "blueprints/dev/project-onboarding-environment.json",
+    "test": "blueprints/test/project-onboarding-environment.json",
+    "uat": "blueprints/uat/project-onboarding-environment.json",
+    "prod": "blueprints/prod/project-onboarding-environment.json"
+  },
+  "target_repository_prefixes": {
+    "dev": "nonprod",
+    "test": "nonprod",
+    "uat": "nonprod",
+    "prod": "prod"
+  },
+  "repository_layouts": {
+    "dev": "shared-nonprod-v2",
+    "test": "shared-nonprod-v2",
+    "uat": "shared-nonprod-v2",
+    "prod": "production-v1"
+  },
+  "handoff_path_template": "environments/{environment}/environment_information.md",
+  "project_catalog": "config/projects.json",
+  "op04_generator": {
+    "repository": "oci-landing-zones/oci-landing-zone-operating-entities",
+    "release": "v3.1.0",
+    "revision": "172809932c53467ab20ec6d1b44290a487211b36",
+    "adapter": "config/render.libsonnet"
+  }
+}

@@ -1,0 +1,163 @@
+{
+   "identity_domain_groups_configuration": {
+      "default_identity_domain_id": "COMMON-DOMAIN",
+      "groups": {
+         "GRP-AUDITORS-ADMIN-KEY": {
+            "description": "Tenancy-scoped audit and read-only access group.",
+            "name": "grp-auditors-admin"
+         },
+         "GRP-COST-ADMIN-KEY": {
+            "description": "Tenancy-scoped cost management access group.",
+            "name": "grp-cost-admin"
+         },
+         "GRP-IAM-ADMIN-KEY": {
+            "description": "Tenancy-scoped IAM administration access group.",
+            "name": "grp-iam-admin"
+         },
+         "GRP-LZ-NETWORK-ADMIN-KEY": {
+            "description": "Landing Zone shared network administration access group.",
+            "name": "grp-lz-network-admin"
+         },
+         "GRP-LZ-SECURITY-ADMIN-KEY": {
+            "description": "Landing Zone shared security administration access group.",
+            "name": "grp-lz-security-admin"
+         },
+         "GRP-SECURITY-ADMIN-KEY": {
+            "description": "Tenancy-scoped security service administration access group.",
+            "name": "grp-security-admin"
+         }
+      },
+      "ignore_external_membership_updates": true
+   },
+   "identity_domains_configuration": {
+      "default_compartment_id": null,
+      "default_defined_tags": null,
+      "default_freeform_tags": null,
+      "identity_domains": {
+         "COMMON-DOMAIN": {
+            "admin_email": null,
+            "admin_first_name": null,
+            "admin_last_name": null,
+            "admin_user_name": null,
+            "allow_signing_cert_public_access": false,
+            "compartment_id": null,
+            "description": "One-OE LZ common Identity Domain",
+            "display_name": "id_lz_common",
+            "home_region": null,
+            "is_hidden_on_login": false,
+            "is_notification_bypassed": false,
+            "is_primary_email_required": false,
+            "license_type": "free",
+            "replica_region": null
+         }
+      }
+   },
+   "policies_configuration": {
+      "enable_cis_benchmark_checks": "false",
+      "supplied_policies": {
+         "PCY-AUDITING-ADMIN-KEY": {
+            "compartment_id": "TENANCY-ROOT",
+            "description": "Grants grp-auditors-admin read-only audit access in the tenancy.",
+            "name": "pcy-auditing-admin",
+            "statements": [
+               "allow group 'id_lz_common'/'grp-auditors-admin' to inspect all-resources in tenancy",
+               "allow group 'id_lz_common'/'grp-auditors-admin' to read instances in tenancy",
+               "allow group 'id_lz_common'/'grp-auditors-admin' to read load-balancers in tenancy",
+               "allow group 'id_lz_common'/'grp-auditors-admin' to read buckets in tenancy",
+               "allow group 'id_lz_common'/'grp-auditors-admin' to read nat-gateways in tenancy",
+               "allow group 'id_lz_common'/'grp-auditors-admin' to read public-ips in tenancy",
+               "allow group 'id_lz_common'/'grp-auditors-admin' to read file-family in tenancy",
+               "allow group 'id_lz_common'/'grp-auditors-admin' to read instance-configurations in tenancy",
+               "allow group 'id_lz_common'/'grp-auditors-admin' to read network-security-groups in tenancy",
+               "allow group 'id_lz_common'/'grp-auditors-admin' to read resource-availability in tenancy",
+               "allow group 'id_lz_common'/'grp-auditors-admin' to read audit-events in tenancy",
+               "allow group 'id_lz_common'/'grp-auditors-admin' to read users in tenancy",
+               "allow group 'id_lz_common'/'grp-auditors-admin' to use cloud-shell in tenancy",
+               "allow group 'id_lz_common'/'grp-auditors-admin' to read vss-family in tenancy",
+               "allow group 'id_lz_common'/'grp-auditors-admin' to read usage-budgets in tenancy",
+               "allow group 'id_lz_common'/'grp-auditors-admin' to read usage-reports in tenancy",
+               "allow group 'id_lz_common'/'grp-auditors-admin' to read data-safe-family in tenancy",
+               "allow group 'id_lz_common'/'grp-auditors-admin' to read vaults in tenancy",
+               "allow group 'id_lz_common'/'grp-auditors-admin' to read keys in tenancy",
+               "allow group 'id_lz_common'/'grp-auditors-admin' to read tag-namespaces in tenancy",
+               "allow group 'id_lz_common'/'grp-auditors-admin' to read serviceconnectors in tenancy",
+               "allow group 'id_lz_common'/'grp-auditors-admin' to use ons-family in tenancy where any {request.operation!=/Create*/, request.operation!=/Update*/, request.operation!=/Delete*/, request.operation!=/Change*/}"
+            ]
+         },
+         "PCY-COST-ADMIN-KEY": {
+            "compartment_id": "TENANCY-ROOT",
+            "description": "Grants grp-cost-admin budget and usage report management access in the tenancy.",
+            "name": "pcy-cost-admin",
+            "statements": [
+               "define tenancy usage-report as ocid1.tenancy.oc1..aaaaaaaaned4fkpkisbwjlr56u7cj63lf3wffbilvqknstgtvzub7vhqkggq",
+               "endorse group 'id_lz_common'/'grp-cost-admin' to read objects in tenancy usage-report",
+               "allow group 'id_lz_common'/'grp-cost-admin' to manage usage-report in tenancy",
+               "allow group 'id_lz_common'/'grp-cost-admin' to manage usage-budgets in tenancy"
+            ]
+         },
+         "PCY-GENERIC-ADMIN-KEY": {
+            "compartment_id": "TENANCY-ROOT",
+            "description": "Grants defined administration groups shared service usage in the tenancy.",
+            "name": "pcy-generic-admin",
+            "statements": [
+               "allow group 'id_lz_common'/'grp-iam-admin', 'id_lz_common'/'grp-auditors-admin', 'id_lz_common'/'grp-security-admin', 'id_lz_common'/'grp-lz-network-admin' to use cloud-shell in tenancy",
+               "allow group 'id_lz_common'/'grp-iam-admin', 'id_lz_common'/'grp-auditors-admin', 'id_lz_common'/'grp-security-admin', 'id_lz_common'/'grp-lz-network-admin' to use cloud-shell-public-network in tenancy",
+               "allow group 'id_lz_common'/'grp-iam-admin', 'id_lz_common'/'grp-auditors-admin', 'id_lz_common'/'grp-security-admin', 'id_lz_common'/'grp-lz-network-admin' to read usage-budgets in tenancy",
+               "allow group 'id_lz_common'/'grp-iam-admin', 'id_lz_common'/'grp-auditors-admin', 'id_lz_common'/'grp-security-admin', 'id_lz_common'/'grp-lz-network-admin' to read usage-reports in tenancy",
+               "allow group 'id_lz_common'/'grp-iam-admin', 'id_lz_common'/'grp-auditors-admin', 'id_lz_common'/'grp-security-admin', 'id_lz_common'/'grp-lz-network-admin' to read objectstorage-namespaces in tenancy",
+               "allow any-user to inspect tag-namespaces in tenancy where target.tag-namespace.name='tagns-lz-role'"
+            ]
+         },
+         "PCY-IAM-ADMIN-KEY": {
+            "compartment_id": "TENANCY-ROOT",
+            "description": "Grants grp-iam-admin IAM administration access in the tenancy.",
+            "name": "pcy-iam-admin",
+            "statements": [
+               "allow group 'id_lz_common'/'grp-iam-admin' to manage policies in tenancy",
+               "allow group 'id_lz_common'/'grp-iam-admin' to manage users in tenancy",
+               "allow group 'id_lz_common'/'grp-iam-admin' to inspect groups in tenancy",
+               "allow group 'id_lz_common'/'grp-iam-admin' to manage groups in tenancy where all {target.group.name != 'Administrators'}",
+               "allow group 'id_lz_common'/'grp-iam-admin' to manage identity-providers in tenancy",
+               "allow group 'id_lz_common'/'grp-iam-admin' to manage dynamic-groups in tenancy",
+               "allow group 'id_lz_common'/'grp-iam-admin' to manage authentication-policies in tenancy",
+               "allow group 'id_lz_common'/'grp-iam-admin' to manage network-sources in tenancy",
+               "allow group 'id_lz_common'/'grp-iam-admin' to manage quota in tenancy",
+               "allow group 'id_lz_common'/'grp-iam-admin' to manage tag-defaults in tenancy",
+               "allow group 'id_lz_common'/'grp-iam-admin' to manage tag-namespaces in tenancy",
+               "allow group 'id_lz_common'/'grp-iam-admin' to manage orm-jobs in tenancy",
+               "allow group 'id_lz_common'/'grp-iam-admin' to manage orm-config-source-providers in tenancy"
+            ]
+         },
+         "PCY-SECURITY-ADMIN-KEY": {
+            "compartment_id": "TENANCY-ROOT",
+            "description": "Grants grp-security-admin security service administration access in the tenancy.",
+            "name": "pcy-security-admin",
+            "statements": [
+               "allow group 'id_lz_common'/'grp-security-admin' to manage cloudevents-rules in tenancy",
+               "allow group 'id_lz_common'/'grp-security-admin' to manage cloud-guard-family in tenancy",
+               "allow group 'id_lz_common'/'grp-security-admin' to read tenancies in tenancy"
+            ]
+         },
+         "PCY-SERVICES-ADMIN-KEY": {
+            "compartment_id": "TENANCY-ROOT",
+            "description": "Grants supported OCI services required Landing Zone service access in the tenancy.",
+            "name": "pcy-services-admin",
+            "statements": [
+               "allow service cloudguard to manage cloudevents-rules in tenancy where target.rule.type='managed'",
+               "allow service cloudguard to read tenancies in tenancy",
+               "allow service cloudguard to read all-resources in tenancy",
+               "allow service cloudguard to use network-security-groups in tenancy",
+               "allow any-user to { WLP_BOM_READ, WLP_CONFIG_READ } in tenancy where all { request.principal.id = target.agent.id, request.principal.type = 'workloadprotectionagent'}",
+               "endorse any-user to { WLP_LOG_CREATE, WLP_METRICS_CREATE, WLP_ADHOC_QUERY_READ, WLP_ADHOC_RESULTS_CREATE } in any-tenancy where all { request.principal.id = target.agent.id, request.principal.type = 'workloadprotectionagent' }",
+               "allow service vulnerability-scanning-service to manage instances in tenancy",
+               "allow service vulnerability-scanning-service to read compartments in tenancy",
+               "allow service vulnerability-scanning-service to read repos in tenancy",
+               "allow service vulnerability-scanning-service to read vnics in tenancy",
+               "allow service vulnerability-scanning-service to read vnic-attachments in tenancy",
+               "allow service osms to read instances in tenancy",
+               "allow service blockstorage, oke, streaming, Fssoc1Prod, objectstorage-eu-frankfurt-1 to use keys in tenancy"
+            ]
+         }
+      }
+   }
+}

@@ -1,0 +1,183 @@
+{
+   "network_configuration": {
+      "network_configuration_categories": {
+         "dev": {
+            "category_compartment_id": "CMP-LZ-DEV-NETWORK-KEY",
+            "non_vcn_specific_gateways": {
+               "inject_into_existing_drgs": {
+                  "DRG-FRA-LZ-HUB-KEY": {
+                     "drg_attachments": {
+                        "DRGATT-FRA-LZ-DEV-PROJ-KEY": {
+                           "display_name": "drgatt-fra-lz-dev-proj",
+                           "drg_route_table_id": "__DRG_SPOKES_ROUTE_TABLE_OCID__",
+                           "drg_route_table_key": null,
+                           "network_details": {
+                              "attached_resource_key": "VCN-FRA-LZ-DEV-PROJECTS-KEY",
+                              "type": "VCN"
+                           }
+                        }
+                     },
+                     "drg_id": "DRG-FRA-LZ-HUB-KEY"
+                  }
+               }
+            },
+            "vcns": {
+               "VCN-FRA-LZ-DEV-PROJECTS-KEY": {
+                  "block_nat_traffic": false,
+                  "cidr_blocks": [
+                     "10.200.64.0/21"
+                  ],
+                  "default_security_list": {
+                     "egress_rules": [ ],
+                     "ingress_rules": [ ]
+                  },
+                  "display_name": "vcn-fra-lz-dev-projects",
+                  "dns_label": "vcnfralzdproj",
+                  "is_attach_drg": false,
+                  "is_create_igw": false,
+                  "is_ipv6enabled": false,
+                  "is_oracle_gua_allocation_enabled": false,
+                  "network_security_groups": { },
+                  "route_tables": {
+                     "RT-FRA-LZ-DEV-PROJ-GENERIC-KEY": {
+                        "display_name": "rt-fra-lz-dev-proj-generic",
+                        "route_rules": {
+                           "rr-fra-hub": {
+                              "description": "Route to the Hub VCN through DRG",
+                              "destination": "10.200.0.0/21",
+                              "destination_type": "CIDR_BLOCK",
+                              "network_entity_key": "DRG-FRA-LZ-HUB-KEY"
+                           },
+                           "rr-fra-natgw": {
+                              "description": "Route to the Internet through NAT GW",
+                              "destination": "0.0.0.0/0",
+                              "destination_type": "CIDR_BLOCK",
+                              "network_entity_key": "NGW-FRA-LZ-DEV-PROJ-KEY"
+                           },
+                           "rr-fra-sgw": {
+                              "description": "Route to Oracle Services Network through Service GW",
+                              "destination": "all-services",
+                              "destination_type": "SERVICE_CIDR_BLOCK",
+                              "network_entity_key": "SGW-FRA-LZ-DEV-PROJ-KEY"
+                           }
+                        }
+                     }
+                  },
+                  "security_lists": {
+                     "SL-FRA-LZ-DEV-PROJ-GENERIC-KEY": {
+                        "display_name": "sl-fra-lz-dev-proj-generic",
+                        "egress_rules": [
+                           {
+                              "description": "Allow all outbound traffic to 0.0.0.0/0 over ALL protocols",
+                              "dst": "0.0.0.0/0",
+                              "dst_type": "CIDR_BLOCK",
+                              "protocol": "ALL",
+                              "stateless": false
+                           },
+                           {
+                              "description": "Allow outbound traffic to Oracle Services Network over ALL protocols",
+                              "dst": "all-services",
+                              "dst_type": "SERVICE_CIDR_BLOCK",
+                              "protocol": "ALL",
+                              "stateless": false
+                           }
+                        ],
+                        "ingress_rules": [
+                           {
+                              "description": "ICMP type 3 code 4",
+                              "icmp_code": 4,
+                              "icmp_type": 3,
+                              "protocol": "ICMP",
+                              "src": "0.0.0.0/0",
+                              "src_type": "CIDR_BLOCK",
+                              "stateless": false
+                           },
+                           {
+                              "description": "ICMP type 3",
+                              "icmp_type": 3,
+                              "protocol": "ICMP",
+                              "src": "10.200.64.0/21",
+                              "src_type": "CIDR_BLOCK",
+                              "stateless": false
+                           },
+                           {
+                              "description": "Allow inbound ICMP type 8 (Echo) from Hub VCN",
+                              "icmp_code": 0,
+                              "icmp_type": 8,
+                              "protocol": "ICMP",
+                              "src": "10.200.0.0/21",
+                              "src_type": "CIDR_BLOCK",
+                              "stateless": false
+                           }
+                        ]
+                     }
+                  },
+                  "subnets": {
+                     "SN-FRA-LZ-DEV-APP-KEY": {
+                        "cidr_block": "10.200.65.0/24",
+                        "dhcp_options_key": "default_dhcp_options",
+                        "display_name": "sn-fra-lz-dev-app",
+                        "dns_label": "snfralzdapp",
+                        "prohibit_internet_ingress": true,
+                        "prohibit_public_ip_on_vnic": true,
+                        "route_table_key": "RT-FRA-LZ-DEV-PROJ-GENERIC-KEY",
+                        "security_list_keys": [
+                           "SL-FRA-LZ-DEV-PROJ-GENERIC-KEY"
+                        ]
+                     },
+                     "SN-FRA-LZ-DEV-DB-KEY": {
+                        "cidr_block": "10.200.66.0/24",
+                        "dhcp_options_key": "default_dhcp_options",
+                        "display_name": "sn-fra-lz-dev-db",
+                        "dns_label": "snfralzddb",
+                        "prohibit_internet_ingress": true,
+                        "prohibit_public_ip_on_vnic": true,
+                        "route_table_key": "RT-FRA-LZ-DEV-PROJ-GENERIC-KEY",
+                        "security_list_keys": [
+                           "SL-FRA-LZ-DEV-PROJ-GENERIC-KEY"
+                        ]
+                     },
+                     "SN-FRA-LZ-DEV-INFRA-KEY": {
+                        "cidr_block": "10.200.67.0/24",
+                        "dhcp_options_key": "default_dhcp_options",
+                        "display_name": "sn-fra-lz-dev-infra",
+                        "dns_label": "snfralzdinfra",
+                        "prohibit_internet_ingress": true,
+                        "prohibit_public_ip_on_vnic": true,
+                        "route_table_key": "RT-FRA-LZ-DEV-PROJ-GENERIC-KEY",
+                        "security_list_keys": [
+                           "SL-FRA-LZ-DEV-PROJ-GENERIC-KEY"
+                        ]
+                     },
+                     "SN-FRA-LZ-DEV-WEB-KEY": {
+                        "cidr_block": "10.200.64.0/24",
+                        "dhcp_options_key": "default_dhcp_options",
+                        "display_name": "sn-fra-lz-dev-web",
+                        "dns_label": "snfralzdweb",
+                        "prohibit_internet_ingress": true,
+                        "prohibit_public_ip_on_vnic": true,
+                        "route_table_key": "RT-FRA-LZ-DEV-PROJ-GENERIC-KEY",
+                        "security_list_keys": [
+                           "SL-FRA-LZ-DEV-PROJ-GENERIC-KEY"
+                        ]
+                     }
+                  },
+                  "vcn_specific_gateways": {
+                     "nat_gateways": {
+                        "NGW-FRA-LZ-DEV-PROJ-KEY": {
+                           "display_name": "ngw-fra-lz-dev-proj"
+                        }
+                     },
+                     "service_gateways": {
+                        "SGW-FRA-LZ-DEV-PROJ-KEY": {
+                           "display_name": "sgw-fra-lz-dev-proj",
+                           "services": "all-services"
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      }
+   }
+}

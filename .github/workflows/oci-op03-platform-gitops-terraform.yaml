@@ -1,0 +1,274 @@
+name: OCI OP03 GitOps platform
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'op03_manage_platform_gitops/configuration/**'
+      - 'op03_manage_platform_gitops/operation.json'
+  push:
+    branches: [main]
+    paths:
+      - 'op03_manage_platform_gitops/configuration/**'
+      - 'op03_manage_platform_gitops/operation.json'
+
+permissions:
+  contents: read
+
+env:
+  ORCHESTRATOR_REVISION: fcf1d7f02c0b4faa1ff55f1776c396452dd51761
+  STATE_KEY: op03_manage_platform_gitops/terraform.tfstate
+
+jobs:
+  op03:
+    name: Plan and apply OP03
+    if: >-
+      vars.FOUNDATION_AUTOMATION_READY == 'true' &&
+      (
+        github.event_name != 'pull_request_target' ||
+        github.event.pull_request.head.repo.full_name == github.repository
+      )
+    runs-on: ${{ fromJSON(vars.FOUNDATION_RUNNER_LABELS || '["self-hosted"]') }}
+    timeout-minutes: 120
+    steps:
+      - name: Check out protected workflow source
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          path: trusted
+          fetch-depth: 0
+
+      - name: Check out requested OP03 revision
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          path: request
+          fetch-depth: 0
+
+      - name: Validate the focused OP03 request
+        id: operation
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE/request"
+          root="op03_manage_platform_gitops"
+          stage="$(
+            jq -er '
+              select(.contract_version == 1 and .enabled == true) |
+              .stage |
+              select(. == "infrastructure" or . == "identity")
+            ' "$root/operation.json"
+          )"
+          if [ "${{ github.event_name }}" = "pull_request_target" ]; then
+            base_stage="$(
+              git show "$BASE_SHA:$root/operation.json" | jq -er '.stage'
+            )"
+            case "$base_stage:$stage" in
+              infrastructure:infrastructure|infrastructure:identity|identity:identity)
+                ;;
+              *)
+                echo "Invalid OP03 stage transition: $base_stage -> $stage" >&2
+                exit 1
+                ;;
+            esac
+          fi
+          mapfile -t changed_files < <(
+            if [ "$BASE_SHA" = \
+              "0000000000000000000000000000000000000000" ]; then
+              git ls-tree -r --name-only "$HEAD_SHA"
+            else
+              git diff --name-only "$BASE_SHA" "$HEAD_SHA"
+            fi
+          )
+          for path in "${changed_files[@]}"; do
+            case "$path" in
+              "$root/operation.json"|"$root/configuration/"*.json)
+                ;;
+              *)
+                echo "OP03 must be a focused phase PR: $path" >&2
+                exit 1
+                ;;
+            esac
+            test "$(git ls-tree "$HEAD_SHA" -- "$path" | awk '{print $1}')" = \
+              "100644"
+          done
+          jq -e '
+            keys == ["compartments_configuration"]
+          ' "$root/configuration/identity.json" >/dev/null
+          jq -e 'keys == ["instances_configuration"]' \
+            "$root/configuration/runner.json" >/dev/null
+          jq -e '
+            keys == [
+              "dynamic_groups_configuration",
+              "policies_configuration"
+            ]
+          ' "$root/configuration/runner-identity.json" >/dev/null
+          active_files=(
+            "$root/configuration/identity.json"
+            "$root/configuration/runner.json"
+          )
+          if [ "$stage" = "identity" ]; then
+            active_files+=("$root/configuration/runner-identity.json")
+          fi
+          if rg -n '__[A-Z0-9_]+__' "${active_files[@]}"; then
+            echo "Unresolved OP03 customer placeholders remain." >&2
+            exit 1
+          fi
+          echo "stage=$stage" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch the pinned Orchestrator
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init --quiet "$GITHUB_WORKSPACE/ORCH"
+          git -C "$GITHUB_WORKSPACE/ORCH" remote add origin \
+            https://github.com/oci-landing-zones/terraform-oci-modules-orchestrator.git
+          git -C "$GITHUB_WORKSPACE/ORCH" fetch --quiet --depth 1 \
+            origin "$ORCHESTRATOR_REVISION"
+          git -C "$GITHUB_WORKSPACE/ORCH" checkout --quiet --detach FETCH_HEAD
+          test "$(git -C "$GITHUB_WORKSPACE/ORCH" rev-parse HEAD)" = \
+            "$ORCHESTRATOR_REVISION"
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4.0.1
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: true
+
+      - name: Load OP01 dependencies
+        shell: bash
+        env:
+          STATE_BUCKET: ${{ vars.OCI_TF_STATE_BUCKET }}
+          STATE_NAMESPACE: ${{ vars.OCI_TF_STATE_NAMESPACE }}
+          STATE_REGION: ${{ vars.REGION }}
+        run: |
+          set -euo pipefail
+          dependency_root="$RUNNER_TEMP/op01-dependency"
+          mkdir -p "$dependency_root"
+          cat > "$dependency_root/backend.tf" <<'EOF'
+          terraform { backend "oci" {} }
+          EOF
+          terraform -chdir="$dependency_root" init \
+            -input=false -no-color \
+            -backend-config="bucket=$STATE_BUCKET" \
+            -backend-config="namespace=$STATE_NAMESPACE" \
+            -backend-config="region=$STATE_REGION" \
+            -backend-config="auth=InstancePrincipal" \
+            -backend-config="key=op01_manage_landing_zone_environment/terraform.tfstate"
+          terraform -chdir="$dependency_root" output -json \
+            iam_resources > "$RUNNER_TEMP/op01-iam.json"
+          terraform -chdir="$dependency_root" output -json \
+            network_resources > "$RUNNER_TEMP/op01-network.json"
+          jq '{compartments: .compartments}' \
+            "$RUNNER_TEMP/op01-iam.json" \
+            > "$RUNNER_TEMP/compartments-dependency.json"
+          jq '{network_resources: .}' \
+            "$RUNNER_TEMP/op01-network.json" \
+            > "$RUNNER_TEMP/network-dependency.json"
+
+      - name: Configure Instance Principal and OP03 state
+        shell: bash
+        env:
+          STATE_BUCKET: ${{ vars.OCI_TF_STATE_BUCKET }}
+          STATE_NAMESPACE: ${{ vars.OCI_TF_STATE_NAMESPACE }}
+          STATE_REGION: ${{ vars.REGION }}
+          TENANCY_OCID: ${{ vars.OCI_TENANCY_OCID }}
+        run: |
+          set -euo pipefail
+          for variable in \
+            STATE_BUCKET STATE_NAMESPACE STATE_REGION TENANCY_OCID
+          do
+            test -n "${!variable}" || {
+              echo "Required repository variable is empty: $variable" >&2
+              exit 1
+            }
+          done
+          cat > "$GITHUB_WORKSPACE/ORCH/providers.tf" <<EOF
+          data "oci_identity_regions" "these" {}
+          data "oci_identity_tenancy" "this" {
+            tenancy_id = var.tenancy_ocid
+          }
+          locals {
+            regions_map = {
+              for r in data.oci_identity_regions.these.regions : r.key => r.name
+            }
+            regions_map_reverse = {
+              for r in data.oci_identity_regions.these.regions : r.name => r.key
+            }
+            home_region_key = data.oci_identity_tenancy.this.home_region_key
+            region_key      = lower(local.regions_map_reverse[var.region])
+          }
+          provider "oci" {
+            auth   = "InstancePrincipal"
+            region = var.region
+          }
+          provider "oci" {
+            auth   = "InstancePrincipal"
+            alias  = "home"
+            region = local.regions_map[local.home_region_key]
+          }
+          provider "oci" {
+            auth   = "InstancePrincipal"
+            alias  = "secondary_region"
+            region = var.region
+          }
+          terraform {
+            required_version = ">= 1.5.0"
+            required_providers {
+              oci = {
+                source                = "oracle/oci"
+                configuration_aliases = [oci.home]
+              }
+            }
+            backend "oci" {
+              bucket    = "$STATE_BUCKET"
+              namespace = "$STATE_NAMESPACE"
+              auth      = "InstancePrincipal"
+              region    = "$STATE_REGION"
+              key       = "$STATE_KEY"
+            }
+          }
+          EOF
+          jq -n \
+            --arg tenancy_ocid "$TENANCY_OCID" \
+            --arg region "$STATE_REGION" \
+            '{tenancy_ocid: $tenancy_ocid, region: $region}' \
+            > "$RUNNER_TEMP/oci-credentials.tfvars.json"
+
+      - name: Initialize and plan OP03
+        shell: bash
+        env:
+          OP03_STAGE: ${{ steps.operation.outputs.stage }}
+          STATE_BUCKET: ${{ vars.OCI_TF_STATE_BUCKET }}
+        run: |
+          set -euo pipefail
+          terraform -chdir="$GITHUB_WORKSPACE/ORCH" init \
+            -input=false -no-color
+          terraform -chdir="$GITHUB_WORKSPACE/ORCH" validate -no-color
+          arguments=(
+            "-var-file=$RUNNER_TEMP/oci-credentials.tfvars.json"
+            "-var-file=$GITHUB_WORKSPACE/request/op03_manage_platform_gitops/configuration/identity.json"
+            "-var-file=$GITHUB_WORKSPACE/request/op03_manage_platform_gitops/configuration/runner.json"
+            "-var=compartments_dependency=$RUNNER_TEMP/compartments-dependency.json"
+            "-var=network_dependency=$RUNNER_TEMP/network-dependency.json"
+            "-var=output_path=$RUNNER_TEMP/op03-output"
+          )
+          if [ "$OP03_STAGE" = "identity" ]; then
+            identity_file="$GITHUB_WORKSPACE/request/op03_manage_platform_gitops/configuration/runner-identity.json"
+            rg -F "target.bucket.name = '$STATE_BUCKET'" "$identity_file"
+            arguments+=("-var-file=$identity_file")
+          fi
+          terraform -chdir="$GITHUB_WORKSPACE/ORCH" plan \
+            -input=false -no-color "${arguments[@]}" \
+            -out="$RUNNER_TEMP/op03.tfplan"
+
+      - name: Apply the same OP03 plan after merge
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          terraform -chdir="$GITHUB_WORKSPACE/ORCH" apply \
+            -input=false -no-color -auto-approve "$RUNNER_TEMP/op03.tfplan"
