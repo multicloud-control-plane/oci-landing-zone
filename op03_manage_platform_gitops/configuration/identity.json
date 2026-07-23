@@ -5,7 +5,7 @@
       "CMP-LZ-SHARED-GITOPS-KEY": {
         "description": "Multi-Cloud Control Plane GitOps execution",
         "name": "cmp-lz-shared-gitops",
-        "parent_id": "CMP-LZ-PLATFORM-KEY"
+        "parent_id": "CMP-LZ-NETWORK-KEY"
       }
     }
   }
