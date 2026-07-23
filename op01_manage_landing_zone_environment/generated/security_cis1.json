@@ -112,11 +112,6 @@
             "compartment_id": "CMP-LZ-DEV-KEY",
             "name": "sz-tgt-lz-dev-environment",
             "recipe_key": "SZ-RCP-LZ-03-DEV-ENVIRONMENT-KEY"
-         },
-         "SZ-TGT-LZ-SHARED-NETWORK-KEY": {
-            "compartment_id": "CMP-LZ-NETWORK-KEY",
-            "name": "sz-tgt-lz-shared-network",
-            "recipe_key": "SZ-RCP-LZ-02-SHARED-NETWORK-KEY"
          }
       },
       "tenancy_ocid": "TENANCY-ROOT"
