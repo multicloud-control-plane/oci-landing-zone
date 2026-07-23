@@ -95,7 +95,8 @@
                "allow dynamic-group dg-mccp-platform-runner to manage secret-family in compartment cmp-lz-dev-mccp",
                "allow dynamic-group dg-mccp-platform-runner to manage database-family in compartment cmp-lz-dev-mccp",
                "allow dynamic-group dg-mccp-platform-runner to manage autonomous-database-family in compartment cmp-lz-dev-mccp",
-               "allow dynamic-group dg-mccp-platform-runner to manage data-safe-family in compartment cmp-lz-dev-mccp"
+               "allow dynamic-group dg-mccp-platform-runner to manage data-safe-family in compartment cmp-lz-dev-mccp",
+               "allow dynamic-group dg-mccp-platform-runner to manage network-security-groups in compartment cmp-lz-dev-mccp"
             ]
          },
          "PCY-LZ-DEV-MCCP-ADMIN-NET-KEY": {
@@ -117,8 +118,7 @@
                "allow dynamic-group dg-mccp-platform-runner to use virtual-network-family in compartment cmp-lz-dev-network",
                "allow dynamic-group dg-mccp-platform-runner to use subnets in compartment cmp-lz-dev-network",
                "allow dynamic-group dg-mccp-platform-runner to use vnics in compartment cmp-lz-dev-network",
-               "allow dynamic-group dg-mccp-platform-runner to manage private-ips in compartment cmp-lz-dev-network",
-               "allow dynamic-group dg-mccp-platform-runner to manage network-security-groups in compartment cmp-lz-dev-network"
+               "allow dynamic-group dg-mccp-platform-runner to manage private-ips in compartment cmp-lz-dev-network"
             ]
          },
          "PCY-LZ-DEV-MCCP-ADMIN-SEC-KEY": {
