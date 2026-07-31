@@ -1,6 +1,9 @@
 {
-  "dev": ["mccp"],
+  "dev": [
+    "mccp",
+    "mccp-v2"
+  ],
+  "prod": [],
   "test": [],
-  "uat": [],
-  "prod": []
+  "uat": []
 }
