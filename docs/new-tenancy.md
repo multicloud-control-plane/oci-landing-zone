@@ -381,7 +381,7 @@ approval, merge, and verify the apply before continuing:
    `.github/project-onboarding-contract.json`.
 5. Move OP01 to `"stage": "pre"`.
 6. Move OP01 to `"stage": "final"`.
-7. If MCPP execution is hosted in this tenancy, deploy OP03 first with
+7. If MCCP execution is hosted in this tenancy, deploy OP03 first with
    `"stage": "infrastructure"`.
 8. Create its restricted OCI Bastion, record the assigned private endpoint
    `/32` in `platform_bastion_private_endpoint_cidr`, and apply the focused
@@ -492,7 +492,7 @@ Verify `oci` and Ansible only after the execution action has installed them. Do
 not put tokens or secret bundles in either file.
 
 OP04 uses the official OE `v3.1.0` project model: one project compartment,
-one administrator group, and the OE policies. The MCPP runner policies are the
+one administrator group, and the OE policies. The MCCP runner policies are the
 only project-IAM extension. They grant NSG management only in the exact project
 compartment, never across the shared environment network compartment. The
 resulting handoff repeats the same project compartment OCID in its three

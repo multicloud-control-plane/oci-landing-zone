@@ -45,7 +45,7 @@ has no Terraform state.
 
 OE `v3.1.0` owns the hierarchy, naming, and standard IAM definitions. The local
 Jsonnet adapter projects its output into the OP00–OP04 state boundaries and
-adds only the MCPP runner policies that OE does not provide. It also removes
+adds only the MCCP runner policies that OE does not provide. It also removes
 OE `v3.1.0`'s obsolete `allow service osms` statement: the legacy
 [OS Management service reached end of life on April 23, 2025](https://docs.oracle.com/iaas/os-management/osms/alx-overview.htm),
 and current OCI IAM rejects the retired `osms` service principal. OS Management
@@ -88,7 +88,7 @@ The current OE model creates one project compartment under the environment's
 handoff are logical compatibility fields and contain the same project
 compartment OCID. The application, database, and infrastructure *subnets*
 remain distinct because they are part of the official project-network model.
-The MCPP runner extension grants project NSG management in that exact project
+The MCCP runner extension grants project NSG management in that exact project
 compartment. It does not grant NSG management across the shared environment
 network compartment; the project manifest combines the handed-off project
 compartment OCID with the handed-off shared VCN OCID.
