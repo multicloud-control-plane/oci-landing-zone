@@ -226,12 +226,12 @@ optional `hashicorp/setup-terraform` wrapper, so the runner does not require a
 separate system Node.js installation.
 
 In the private foundation repository, use **Settings → Actions → Runners →
-New self-hosted runner**. Run the generated repository-scoped Linux ARM64
-configuration through a time-limited OCI Bastion managed SSH session, name the
-runner `mccp-foundation-<region>`, add only the `mccp-foundation` custom label,
-and configure it as the `github-runner` system service. The registration token
-is short-lived and is not an OCI credential. Never store it in cloud-init,
-GitHub secrets, shell history, or the repository.
+New self-hosted runner**. Run the generated Linux ARM64 configuration through a
+time-limited OCI Bastion managed SSH session, name the runner
+`mccp-foundation-<region>`, add only the `mccp-foundation` custom label, and
+configure it as the `github-runner` system service. The registration token is
+short-lived and is not an OCI credential. Never store it in cloud-init, GitHub
+secrets, shell history, or the repository.
 
 Bind the runner identity to its exact instance OCID:
 
@@ -300,7 +300,10 @@ the result. The parent and environment Security Zones remain enforced. OCI keeps
 a standard Cloud Guard target for the removed delegated project compartment, so
 monitoring continues while the governed project pull-request workflow can
 create, update, and delete approved project NSGs. Do not perform this action
-manually or grant the project runner Security Zone permissions.
+manually or grant the project runner Security Zone permissions. When the Cloud
+Operator retires that project through the three-file OP04 retirement change,
+the protected workflow verifies and removes only this detached target before it
+applies the reviewed compartment destroy plan.
 
 ## 4. Configure GitHub and run readiness
 
@@ -363,16 +366,19 @@ approval, merge, and verify the apply before continuing:
 9. Replace the OP03 identity placeholders, move OP03 to
    `"stage": "identity"`, and apply the focused identity request with the
    foundation runner.
-10. Validate the new private runner and its Instance Principal identity. On a
-    paid GitHub plan, it can now be registered in a repository-restricted
-    organization runner group. On GitHub Free, leave it unregistered until the
-    project repository exists.
+10. Validate the new private runner and its Instance Principal identity. Leave
+    it unregistered until the project repository exists, then register it in an
+    organization runner group restricted to the selected project repositories.
+    This GitHub Free MVP uses that selected-repository scope; a paid plan can
+    add stronger environment and reviewer controls described in the final
+    hardening guide.
 11. Add one project name to `config/projects.json`, generate
     `op04:<environment>-<project>`, and submit the three-file OP04 request:
     the catalog change, `generated/iam.json`, and the generated,
     reviewable version-2 `project-security-zone-exception.json` declaration.
-12. Create and hand off the project repository. On GitHub Free, register the
-    runner to that repository only; do not register it at organization scope.
+12. Create and hand off the project repository. Add it to the selected-
+    repository runner group; do not grant the runner group to unrelated
+    repositories.
 
 ### Configure private access to the OP03 runner
 
@@ -421,14 +427,16 @@ session and verify `cloud-init status --wait`, `rg --version`,
 Instance Principal tenancy identity, and read-only access to the private
 versioned state bucket.
 
-Registration follows the GitHub plan. Paid plans should put the runner in a
-repository-restricted organization runner group. GitHub Free private
-repositories must use repository-scoped registration after OP04 and handoff
-have created the target repository. Generate the short-lived token from that
-repository's **Settings → Actions → Runners → New self-hosted runner** page,
-register as `github-runner`, and apply only the labels declared by that
-repository's protected `control-plane.json`. Never paste the token into a
-ticket, pull request, chat, shell history, or committed file.
+After OP04 and handoff, register the runner in an organization runner group
+restricted to the selected project repositories. This is supported by GitHub
+Free and is the MVP default: add each handed-off project repository to that
+group, and do not grant it to unrelated repositories. Paid plans can add
+environment protection and reviewer controls described in the final hardening
+guide. Generate the short-lived token from the organization runner-group
+registration page, register as `github-runner`, and apply only the labels
+declared by the protected caller workflow: `self-hosted`, the cloud, and the
+environment. Never paste the token into a ticket, pull request, chat, shell
+history, or committed file.
 
 OP04 uses the official OE `v3.1.0` project model: one project compartment,
 one administrator group, and the OE policies. The MCPP runner policies are the
