@@ -293,6 +293,15 @@ before Terraform if it cannot resolve it. Do not edit generated files manually.
 The protected workflow regenerates changed phases from OE `v3.1.0` and rejects
 drift.
 
+OP04 has a separate, explicit delegated project compartment boundary. After an
+approved OP04 apply creates the project child, the protected workflow removes
+only that child from inherited environment Security Zone enforcement and verifies
+the result. The parent and environment Security Zones remain enforced. OCI keeps
+a standard Cloud Guard target for the removed delegated project compartment, so
+monitoring continues while the governed project pull-request workflow can
+create, update, and delete approved project NSGs. Do not perform this action
+manually or grant the project runner Security Zone permissions.
+
 ## 4. Configure GitHub and run readiness
 
 Set these repository variables:

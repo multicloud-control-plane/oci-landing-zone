@@ -56,6 +56,15 @@ protected adapter omits only the shared-network child target. Shared network
 and platform resources therefore inherit the same CIS Level 1 zone from
 `CMP-LANDINGZONE-KEY`; the environment-level zone remains unchanged.
 
+The delegated project compartment is a separate MCCP ownership boundary. OP04
+creates it below the environment's `PROJECTS` compartment, then removes only
+that child from inherited environment Security Zone enforcement. Foundation and
+environment zones remain enforced. OCI retains a standard Cloud Guard target
+for the removed delegated project compartment, while the Project Team's
+governed pull-request workflow can manage the approved project NSG lifecycle,
+including deletion. This is explicit MCCP adapter behavior; OE `v3.1.0` does
+not model the project exception.
+
 OE `v3.1.0` derives an example Bastion SSH source by adding host offset `123`
 to the Hub management subnet. OCI Bastion assigns its private endpoint
 dynamically, so that example is not an executable access contract. The

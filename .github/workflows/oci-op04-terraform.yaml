@@ -407,12 +407,96 @@ jobs:
             -var="output_path=$RUNNER_TEMP/op04-output" \
             -out="$RUNNER_TEMP/op04.tfplan"
 
+      - name: Preview delegated project Security Zone exception
+        if: github.event_name == 'pull_request_target'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          Project Security Zone exception: pending post-merge removal for the delegated project compartment.
+          EOF
+
       - name: Apply the same OP04 plan after merge
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: bash
         run: |
           terraform -chdir="$GITHUB_WORKSPACE/ORCH" apply \
             -input=false -no-color -auto-approve "$RUNNER_TEMP/op04.tfplan"
+
+      - name: Resolve delegated project Security Zone exception
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          ENVIRONMENT: ${{ steps.target.outputs.environment }}
+          OCI_CLI_AUTH: instance_principal
+          OCI_CLI_REGION: ${{ vars.REGION }}
+        run: |
+          set -euo pipefail
+          project_output="$(
+            terraform -chdir="$GITHUB_WORKSPACE/ORCH" output -json \
+              iam_resources
+          )"
+          project_compartment_id="$(jq -er '
+            .compartments |
+            to_entries |
+            if length == 1 then .[0].value.id
+            else error("Expected exactly one OP04 project compartment")
+            end
+          ' <<< "$project_output")"
+          environment_key="CMP-LZ-${ENVIRONMENT^^}-KEY"
+          environment_compartment_id="$(jq -er \
+            --arg key "$environment_key" \
+            '.compartments[$key].id' \
+            "$RUNNER_TEMP/compartments-dependency.json")"
+          environment_zone_name="sz-tgt-lz-${ENVIRONMENT}-environment"
+          zones="$(
+            oci cloud-guard security-zone-collection list-security-zones \
+              --compartment-id "$environment_compartment_id" \
+              --display-name "$environment_zone_name" \
+              --lifecycle-state ACTIVE \
+              --all
+          )"
+          zone_id="$(jq -er \
+            --arg display_name "$environment_zone_name" \
+            --arg compartment_id "$environment_compartment_id" '
+              [
+                .data.items[]? |
+                select(
+                  .["display-name"] == $display_name and
+                  .["compartment-id"] == $compartment_id and
+                  .["lifecycle-state"] == "ACTIVE"
+                ) |
+                .id
+              ] |
+              if length == 1 then .[0]
+              else error("Expected exactly one active environment Security Zone")
+              end
+            ' <<< "$zones")"
+          zone="$(
+            oci cloud-guard security-zone get --security-zone-id "$zone_id"
+          )"
+          if jq -e --arg id "$project_compartment_id" \
+            '.data["inherited-by-compartments"] | index($id) != null' \
+            <<< "$zone" >/dev/null; then
+            oci cloud-guard security-zone remove \
+              --security-zone-id "$zone_id" \
+              --compartment-id "$project_compartment_id" \
+              --wait-for-state ACTIVE
+            result="applied"
+          else
+            result="already present"
+          fi
+          verified_zone="$(
+            oci cloud-guard security-zone get --security-zone-id "$zone_id"
+          )"
+          if jq -e --arg id "$project_compartment_id" \
+            '.data["inherited-by-compartments"] | index($id) != null' \
+            <<< "$verified_zone" >/dev/null; then
+            echo "Project compartment still inherits the environment Security Zone." >&2
+            exit 1
+          fi
+          printf 'Project Security Zone exception: %s.\n' "$result" \
+            >> "$GITHUB_STEP_SUMMARY"
 
   handoff:
     name: Generate project handoff after OP04
