@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 Oracle and/or its affiliates.
 """Render the credential-free OP04 handoff from protected evidence."""
 
 from __future__ import annotations

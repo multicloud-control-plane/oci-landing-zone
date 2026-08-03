@@ -1,5 +1,7 @@
 # OCI Landing Zone
 
+Reviewed: 2026-07-25
+
 Use reviewed Git changes to establish and operate your OCI foundation. A pull
 request shows the Terraform plan; an approved merge applies the change through
 a trusted self-hosted runner.
@@ -24,10 +26,11 @@ initial deployment, change only the phase that owns the resource.
 ## Before the first workflow
 
 An OCI administrator must create one dedicated private foundation runner, its
-exact-instance dynamic group and policy, and the private Object Storage state
-bucket before foundation automation can start. See
+exact-instance dynamic group and policy, and the private foundation-state
+bucket before foundation automation can start. Create the separate
+project-state bucket before enabling OP03. See
 [New tenancy setup](docs/new-tenancy.md) before changing any phase.
-The state bucket must have Object Storage versioning enabled.
+Both state buckets must have Object Storage versioning enabled.
 
 Register the runner with this repository and set these GitHub repository
 variables:
@@ -35,7 +38,8 @@ variables:
 | Variable | Value |
 |---|---|
 | `FOUNDATION_RUNNER_LABELS` | JSON runner-label array, for example `["self-hosted","linux","arm64","mccp-foundation"]` |
-| `OCI_TF_STATE_BUCKET` | State bucket name |
+| `OCI_TF_STATE_BUCKET` | Foundation-state bucket name |
+| `PROJECT_STATE_BUCKET` | Separate project-state bucket name used by OP03 IAM |
 | `OCI_TF_STATE_NAMESPACE` | Object Storage namespace |
 | `REGION` | State bucket region |
 | `OCI_TENANCY_OCID` | Tenancy used to validate the OP02 handoff |
@@ -43,6 +47,10 @@ variables:
 
 The runner uses OCI Instance Principal authentication. Do not store API keys or
 private keys in this repository.
+
+This preview supports only the commercial OCI realm `oc1` and standard
+commercial region identifiers such as `eu-frankfurt-1`. Its validators reject
+Dedicated Region Cloud@Customer, government, and other non-`oc1` identifiers.
 
 ## Operating rules
 
@@ -54,13 +62,12 @@ private keys in this repository.
 - Keep OP04 under Cloud Operator ownership. Project Teams start after handoff.
 - Do not run local applies after the permanent GitOps flow is active.
 
-The configuration pins OE `v3.1.0`, Orchestrator `release-2.1.4`, and Exadata
-modules `release-1.2.0` to immutable revisions. Workflows install Terraform
+The configuration pins OE `v3.1.0`, Orchestrator `release-2.1.4`, and its OCI
+database module dependency to immutable revisions. Workflows install Terraform
 `1.15.8`; the Orchestrator's `>= 1.5.0` declaration is its OCI Resource Manager
 compatibility floor, not a cap on this CLI execution path. OE `v3.1.0` creates
-one compartment per project. The three
-workload-role fields in the handoff all reference that same compartment; no
-retired OE `v2.x` child hierarchy is recreated.
+one compartment per project. The three workload-role fields in the handoff all
+reference that same compartment.
 
 After OP04, download `project-foundation-handoff.json` for the Multi-Cloud
 Control Plane and `environment_information.md` for the project team. Neither file

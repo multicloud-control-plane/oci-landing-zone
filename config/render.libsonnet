@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Oracle and/or its affiliates.
 // Protected OP00-OP02 projection adapter for OE config mode.
 //
 // OCI Landing Zone Operating Entities owns the resource definitions. This
@@ -441,6 +442,7 @@ local render(customer) =
       [key]: iam.policies_configuration.supplied_policies[key]
       for key in policy_keys
     };
+
     local runner_policies = {
       [key + '-GITOPS']:
         runner_policy(
