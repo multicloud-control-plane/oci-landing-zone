@@ -108,12 +108,10 @@ jobs:
           ' config/projects.json >/dev/null
           case "${#changed_files[@]}" in
             1|2)
-              printf '%s\n' "${changed_files[@]}" | \
-                rg -Fx "$root/generated/project-security-zone-exception.json" \
-                >/dev/null
-              test "$(git ls-tree "$HEAD_SHA" -- \
-                "$root/generated/project-security-zone-exception.json" | \
-                awk '{print $1}')" = "100644"
+              for path in "${changed_files[@]}"; do
+                test "$(git ls-tree "$HEAD_SHA" -- "$path" | \
+                  awk '{print $1}')" = "100644"
+              done
               git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- \
                 config/projects.json
               jq -e \
