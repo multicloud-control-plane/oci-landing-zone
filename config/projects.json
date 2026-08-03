@@ -1,6 +1,5 @@
 {
   "dev": [
-    "mccp",
     "mccp-v2"
   ],
   "prod": [],
