@@ -520,6 +520,67 @@ jobs:
           Project retirement: the reviewed Terraform destroy plan targets only this project's isolated OP04 state.
           EOF
 
+      - name: Remove the detached Cloud Guard Target before retirement
+        if: >-
+          github.event_name == 'push' &&
+          github.ref == 'refs/heads/main' &&
+          steps.target.outputs.operation == 'retirement'
+        shell: bash
+        env:
+          OP04_ROOT: ${{ steps.target.outputs.root }}
+          OCI_CLI_AUTH: instance_principal
+          OCI_CLI_REGION: ${{ vars.REGION }}
+        run: |
+          set -euo pipefail
+          exception_file="$RUNNER_TEMP/base-project-security-zone-exception.json"
+          project_compartment_key="$(jq -er '.project_compartment_key' "$exception_file")"
+          project_output="$(
+            terraform -chdir="$GITHUB_WORKSPACE/ORCH" output -json iam_resources
+          )"
+          project_compartment_id="$(jq -er \
+            --arg key "$project_compartment_key" \
+            '.compartments[$key].id' \
+            <<< "$project_output")"
+          resources="$(
+            oci search resource structured-search \
+              --query-text "query all resources where compartmentId = '$project_compartment_id'" \
+              --limit 1000
+          )"
+          mapfile -t target_ids < <(
+            jq -r '
+              .data.items[]? |
+              select(.["resource-type"] == "CloudGuardTarget") |
+              .identifier
+            ' <<< "$resources"
+          )
+          case "${#target_ids[@]}" in
+            0)
+              echo "Project retirement Cloud Guard Target: absent." \
+                >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            1)
+              target="$(
+                oci cloud-guard target get --target-id "${target_ids[0]}"
+              )"
+              jq -e --arg project_compartment_id "$project_compartment_id" '
+                .data["target-resource-id"] == $project_compartment_id and
+                .data["target-resource-type"] == "COMPARTMENT" and
+                .data["compartment-id"] == $project_compartment_id and
+                .data["lifecycle-state"] == "ACTIVE"
+              ' <<< "$target" >/dev/null
+              oci cloud-guard target delete \
+                --target-id "${target_ids[0]}" \
+                --force \
+                --wait-for-state DELETED
+              echo "Project retirement Cloud Guard Target: removed." \
+                >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            *)
+              echo "Expected at most one Cloud Guard Target for the retiring project compartment." >&2
+              exit 1
+              ;;
+          esac
+
       - name: Apply the same OP04 plan after merge
         if: >-
           github.event_name == 'push' &&
