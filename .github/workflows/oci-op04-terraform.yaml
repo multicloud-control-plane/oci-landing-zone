@@ -33,6 +33,7 @@ jobs:
     timeout-minutes: 90
     outputs:
       target_project: ${{ steps.target.outputs.project }}
+      operation: ${{ steps.target.outputs.operation }}
     steps:
       - name: Check out protected workflow and generator
         uses: actions/checkout@v7.0.1
@@ -48,7 +49,7 @@ jobs:
           path: request
           fetch-depth: 0
 
-      - name: Resolve one project declaration or maintenance update
+      - name: Resolve one project declaration, maintenance update, or retirement
         id: target
         shell: bash
         env:
@@ -91,12 +92,10 @@ jobs:
               config/projects.json|"$root/generated/iam.json"|"$root/generated/project-security-zone-exception.json")
                 ;;
               *)
-                echo "OP04 must add one generated project only: $path" >&2
+                echo "OP04 accepts changes for exactly one project: $path" >&2
                 exit 1
                 ;;
             esac
-            test "$(git ls-tree "$HEAD_SHA" -- "$path" | awk '{print $1}')" = \
-              "100644"
           done
           jq -e '
             keys == ["dev", "prod", "test", "uat"] and
@@ -112,6 +111,9 @@ jobs:
               printf '%s\n' "${changed_files[@]}" | \
                 rg -Fx "$root/generated/project-security-zone-exception.json" \
                 >/dev/null
+              test "$(git ls-tree "$HEAD_SHA" -- \
+                "$root/generated/project-security-zone-exception.json" | \
+                awk '{print $1}')" = "100644"
               git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- \
                 config/projects.json
               jq -e \
@@ -119,6 +121,7 @@ jobs:
                 --arg project "$project_name" \
                 '.[$environment] | index($project) != null' \
                 config/projects.json >/dev/null
+              operation="maintenance"
               ;;
             3)
               printf '%s\n' "${changed_files[@]}" | sort | diff -u - \
@@ -133,18 +136,49 @@ jobs:
                 --slurpfile after config/projects.json \
                 --arg environment "$environment" \
                 --arg project "$project_name" '
-                  (($after[0][$environment] - $before[0][$environment]) ==
-                    [$project]) and
-                  (($before[0][$environment] - $after[0][$environment]) == []) and
-                  all(
-                    ["dev", "test", "uat", "prod"][] |
-                    select(. != $environment);
-                    $after[0][.] == $before[0][.]
-                  )
-                ' | jq -e . >/dev/null
+                  {
+                    added: ($after[0][$environment] - $before[0][$environment]),
+                    removed: ($before[0][$environment] - $after[0][$environment]),
+                    other_environments_unchanged: all(
+                      ["dev", "test", "uat", "prod"][] |
+                      select(. != $environment);
+                      $after[0][.] == $before[0][.]
+                    )
+                  }
+                ' > "$RUNNER_TEMP/project-change.json"
+              if jq -e --arg project "$project_name" '
+                .added == [$project] and
+                .removed == [] and
+                .other_environments_unchanged
+              ' "$RUNNER_TEMP/project-change.json" >/dev/null; then
+                for path in "${changed_files[@]}"; do
+                  test "$(git ls-tree "$HEAD_SHA" -- "$path" | \
+                    awk '{print $1}')" = "100644"
+                done
+                operation="onboarding"
+              elif jq -e --arg project "$project_name" '
+                .added == [] and
+                .removed == [$project] and
+                .other_environments_unchanged
+              ' "$RUNNER_TEMP/project-change.json" >/dev/null; then
+                test "$(git ls-tree "$HEAD_SHA" -- config/projects.json | \
+                  awk '{print $1}')" = "100644"
+                for path in \
+                  "$root/generated/iam.json" \
+                  "$root/generated/project-security-zone-exception.json"
+                do
+                  test "$(git ls-tree "$BASE_SHA" -- "$path" | \
+                    awk '{print $1}')" = "100644"
+                  test -z "$(git ls-tree "$HEAD_SHA" -- "$path")"
+                done
+                operation="retirement"
+              else
+                echo "OP04 three-file changes must add or retire exactly one project." >&2
+                exit 1
+              fi
               ;;
             *)
-              echo "OP04 accepts one or two generated project maintenance artifacts or one three-file project addition." >&2
+              echo "OP04 accepts one or two maintenance artifacts, one three-file addition, or one three-file retirement." >&2
               exit 1
               ;;
           esac
@@ -154,12 +188,15 @@ jobs:
             echo "project_name=$project_name"
             echo "root=$root"
             echo "state_key=$root/terraform.tfstate"
+            echo "operation=$operation"
           } >> "$GITHUB_OUTPUT"
 
       - name: Regenerate OP04 from pinned OE
         shell: bash
         env:
           OP04_ROOT: ${{ steps.target.outputs.root }}
+          OPERATION: ${{ steps.target.outputs.operation }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
           set -euo pipefail
           git init --quiet "$RUNNER_TEMP/oe"
@@ -178,8 +215,24 @@ jobs:
             "$render_config/render.libsonnet"
           cp "$GITHUB_WORKSPACE/request/config/customer.jsonnet" \
             "$render_config/customer.jsonnet"
-          cp "$GITHUB_WORKSPACE/request/config/projects.json" \
-            "$render_config/projects.json"
+          if [ "$OPERATION" = "retirement" ]; then
+            git -C "$GITHUB_WORKSPACE/request" show \
+              "$BASE_SHA:config/projects.json" \
+              > "$render_config/projects.json"
+            git -C "$GITHUB_WORKSPACE/request" show \
+              "$BASE_SHA:$OP04_ROOT/generated/iam.json" \
+              > "$RUNNER_TEMP/base-op04-iam.json"
+            git -C "$GITHUB_WORKSPACE/request" show \
+              "$BASE_SHA:$OP04_ROOT/generated/project-security-zone-exception.json" \
+              > "$RUNNER_TEMP/base-project-security-zone-exception.json"
+            iam_input="$RUNNER_TEMP/base-op04-iam.json"
+            exception_input="$RUNNER_TEMP/base-project-security-zone-exception.json"
+          else
+            cp "$GITHUB_WORKSPACE/request/config/projects.json" \
+              "$render_config/projects.json"
+            iam_input="$GITHUB_WORKSPACE/request/$OP04_ROOT/generated/iam.json"
+            exception_input="$GITHUB_WORKSPACE/request/$OP04_ROOT/generated/project-security-zone-exception.json"
+          fi
           mapfile -t environments < <(
             cd "$render_config"
             jsonnet -e '
@@ -204,17 +257,17 @@ jobs:
             --multi "$regenerated" "$render_config/render.jsonnet"
           diff -u \
             "$regenerated/$OP04_ROOT/generated/iam.json" \
-            "$GITHUB_WORKSPACE/request/$OP04_ROOT/generated/iam.json"
+            "$iam_input"
           diff -u \
             "$regenerated/$OP04_ROOT/generated/project-security-zone-exception.json" \
-            "$GITHUB_WORKSPACE/request/$OP04_ROOT/generated/project-security-zone-exception.json"
+            "$exception_input"
           jq -e '
             keys == [
               "compartments_configuration",
               "identity_domain_groups_configuration",
               "policies_configuration"
             ]
-          ' "$GITHUB_WORKSPACE/request/$OP04_ROOT/generated/iam.json" >/dev/null
+          ' "$iam_input" >/dev/null
           jq -e '
             keys == [
               "environment_compartment_key",
@@ -231,17 +284,18 @@ jobs:
               ][];
               type == "string" and length > 0
             )
-          ' "$GITHUB_WORKSPACE/request/$OP04_ROOT/generated/project-security-zone-exception.json" >/dev/null
+          ' "$exception_input" >/dev/null
           jq -e --slurpfile exception \
-            "$GITHUB_WORKSPACE/request/$OP04_ROOT/generated/project-security-zone-exception.json" '
+            "$exception_input" '
               .compartments_configuration.compartments |
               keys == [$exception[0].project_compartment_key]
-            ' "$GITHUB_WORKSPACE/request/$OP04_ROOT/generated/iam.json" >/dev/null
+            ' "$iam_input" >/dev/null
           if rg -n '__[A-Za-z0-9_]+__' \
-            "$GITHUB_WORKSPACE/request/$OP04_ROOT"; then
+            "$iam_input" "$exception_input"; then
             echo "Unresolved OP04 placeholder." >&2
             exit 1
           fi
+          cp "$iam_input" "$RUNNER_TEMP/op04-iam.json"
 
       - name: Fetch the pinned Orchestrator
         shell: bash
@@ -424,22 +478,30 @@ jobs:
       - name: Initialize and plan OP04
         shell: bash
         env:
-          OP04_ROOT: ${{ steps.target.outputs.root }}
+          OPERATION: ${{ steps.target.outputs.operation }}
         run: |
           set -euo pipefail
           terraform -chdir="$GITHUB_WORKSPACE/ORCH" init \
             -input=false -no-color
           terraform -chdir="$GITHUB_WORKSPACE/ORCH" validate -no-color
-          terraform -chdir="$GITHUB_WORKSPACE/ORCH" plan \
+          plan_args=(
             -input=false -no-color \
             -var-file="$RUNNER_TEMP/oci-credentials.tfvars.json" \
             -var-file="$RUNNER_TEMP/op04-dependencies.tfvars.json" \
-            -var-file="$GITHUB_WORKSPACE/request/$OP04_ROOT/generated/iam.json" \
+            -var-file="$RUNNER_TEMP/op04-iam.json" \
             -var="output_path=$RUNNER_TEMP/op04-output" \
             -out="$RUNNER_TEMP/op04.tfplan"
+          )
+          if [ "$OPERATION" = "retirement" ]; then
+            plan_args+=(-destroy)
+          fi
+          terraform -chdir="$GITHUB_WORKSPACE/ORCH" plan \
+            "${plan_args[@]}"
 
       - name: Preview delegated project Security Zone exception
-        if: github.event_name == 'pull_request_target'
+        if: >-
+          github.event_name == 'pull_request_target' &&
+          steps.target.outputs.operation != 'retirement'
         shell: bash
         run: |
           set -euo pipefail
@@ -447,15 +509,31 @@ jobs:
           Project Security Zone exception: pending post-merge removal for the delegated project compartment.
           EOF
 
+      - name: Preview OP04 project retirement
+        if: >-
+          github.event_name == 'pull_request_target' &&
+          steps.target.outputs.operation == 'retirement'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          Project retirement: the reviewed Terraform destroy plan targets only this project's isolated OP04 state.
+          EOF
+
       - name: Apply the same OP04 plan after merge
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: >-
+          github.event_name == 'push' &&
+          github.ref == 'refs/heads/main'
         shell: bash
         run: |
           terraform -chdir="$GITHUB_WORKSPACE/ORCH" apply \
             -input=false -no-color -auto-approve "$RUNNER_TEMP/op04.tfplan"
 
       - name: Resolve delegated project Security Zone exception
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: >-
+          github.event_name == 'push' &&
+          github.ref == 'refs/heads/main' &&
+          steps.target.outputs.operation != 'retirement'
         shell: bash
         env:
           OP04_ROOT: ${{ steps.target.outputs.root }}
@@ -536,7 +614,10 @@ jobs:
   handoff:
     name: Generate project handoff after OP04
     needs: project
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.project.outputs.operation != 'retirement'
     permissions:
       contents: read
     uses: ./.github/workflows/oci-project-handoff.yaml
