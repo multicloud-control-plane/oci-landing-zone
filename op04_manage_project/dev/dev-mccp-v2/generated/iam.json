@@ -61,7 +61,7 @@
             ]
          },
          "PCY-LZ-DEV-MCCP-V2-ADMIN-KEY-GITOPS": {
-            "compartment_id": "CMP-LZ-DEV-PROJECTS-KEY",
+            "compartment_id": "CMP-LZ-DEV-MCCP-V2-KEY",
             "description": "GitOps equivalent of the pinned OE project policy.",
             "name": "pcy-lz-dev-mccp-v2-admin-gitops",
             "statements": [
