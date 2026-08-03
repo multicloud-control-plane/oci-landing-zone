@@ -408,7 +408,7 @@ local render(customer) =
     local runner_policy(policy, suffix) =
       policy {
         compartment_id:
-          if suffix == 'project' then project_container_key
+          if suffix == 'project' then project_key
           else environment_key,
         name: policy.name + '-gitops',
         description:
