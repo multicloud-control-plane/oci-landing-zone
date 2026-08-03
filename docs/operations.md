@@ -23,14 +23,16 @@ restore a child-specific network zone unless the upstream template has been
 fixed or every dependent platform resource is placed under that same zone.
 
 OP04 creates each delegated project compartment under the environment's
-`PROJECTS` compartment. After a merged OP04 apply, its protected workflow
-removes only that child from inherited environment Security Zone enforcement and
-verifies the result. The foundation and environment Security Zones remain
-enforced, and OCI retains a standard Cloud Guard target for the removed
-delegated project compartment. This preserves the governed project
-pull-request lifecycle for approved project NSGs, including deletion. Project
-Teams must not remove Security Zones manually or receive Security Zone
-permissions.
+`PROJECTS` compartment. Its generated
+`project-security-zone-exception.json` is protected, reviewable OP04 intent
+that identifies the project child and inherited environment Security Zone. After
+a merged OP04 apply, the workflow uses that declaration to remove only the
+project child from inherited Security Zone enforcement and verifies the result.
+The foundation and environment Security Zones remain enforced, and OCI retains
+a standard Cloud Guard target for the removed delegated project compartment.
+This preserves the governed project pull-request lifecycle for approved project
+NSGs, including deletion. Project Teams must not remove Security Zones manually
+or receive Security Zone permissions.
 
 The Hub management security list must allow SSH only from the platform
 Bastion's current private endpoint `/32`. Retrieve that address from OCI,

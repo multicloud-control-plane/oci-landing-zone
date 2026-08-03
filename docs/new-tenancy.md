@@ -368,7 +368,9 @@ approval, merge, and verify the apply before continuing:
     organization runner group. On GitHub Free, leave it unregistered until the
     project repository exists.
 11. Add one project name to `config/projects.json`, generate
-   `op04:<environment>-<project>`, and submit the two-file OP04 request.
+    `op04:<environment>-<project>`, and submit the three-file OP04 request:
+    the catalog change, `generated/iam.json`, and the generated,
+    reviewable `project-security-zone-exception.json` declaration.
 12. Create and hand off the project repository. On GitHub Free, register the
     runner to that repository only; do not register it at organization scope.
 

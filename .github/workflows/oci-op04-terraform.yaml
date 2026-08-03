@@ -70,7 +70,8 @@ jobs:
               awk -F/ '
                 $1 == "op04_manage_project" &&
                 $4 == "generated" &&
-                $5 == "iam.json" &&
+                ($5 == "iam.json" ||
+                 $5 == "project-security-zone-exception.json") &&
                 NF == 5 {
                   print $1 "/" $2 "/" $3
                 }
@@ -87,7 +88,7 @@ jobs:
           test "${#project_name}" -le 30
           for path in "${changed_files[@]}"; do
             case "$path" in
-              config/projects.json|"$root/generated/iam.json")
+              config/projects.json|"$root/generated/iam.json"|"$root/generated/project-security-zone-exception.json")
                 ;;
               *)
                 echo "OP04 must add one generated project only: $path" >&2
@@ -107,8 +108,10 @@ jobs:
             all(.[]; length == (unique | length))
           ' config/projects.json >/dev/null
           case "${#changed_files[@]}" in
-            1)
-              test "${changed_files[0]}" = "$root/generated/iam.json"
+            1|2)
+              printf '%s\n' "${changed_files[@]}" | \
+                rg -Fx "$root/generated/project-security-zone-exception.json" \
+                >/dev/null
               git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- \
                 config/projects.json
               jq -e \
@@ -117,9 +120,12 @@ jobs:
                 '.[$environment] | index($project) != null' \
                 config/projects.json >/dev/null
               ;;
-            2)
-              test "${changed_files[0]}" = "config/projects.json" ||
-                test "${changed_files[1]}" = "config/projects.json"
+            3)
+              printf '%s\n' "${changed_files[@]}" | sort | diff -u - \
+                <(printf '%s\n' \
+                  "config/projects.json" \
+                  "$root/generated/iam.json" \
+                  "$root/generated/project-security-zone-exception.json" | sort)
               git show "$BASE_SHA:config/projects.json" \
                 > "$RUNNER_TEMP/projects-before.json"
               jq -n \
@@ -138,7 +144,7 @@ jobs:
                 ' | jq -e . >/dev/null
               ;;
             *)
-              echo "OP04 accepts one generated IAM maintenance update or one two-file project addition." >&2
+              echo "OP04 accepts one or two generated project maintenance artifacts or one three-file project addition." >&2
               exit 1
               ;;
           esac
@@ -199,6 +205,9 @@ jobs:
           diff -u \
             "$regenerated/$OP04_ROOT/generated/iam.json" \
             "$GITHUB_WORKSPACE/request/$OP04_ROOT/generated/iam.json"
+          diff -u \
+            "$regenerated/$OP04_ROOT/generated/project-security-zone-exception.json" \
+            "$GITHUB_WORKSPACE/request/$OP04_ROOT/generated/project-security-zone-exception.json"
           jq -e '
             keys == [
               "compartments_configuration",
@@ -206,6 +215,28 @@ jobs:
               "policies_configuration"
             ]
           ' "$GITHUB_WORKSPACE/request/$OP04_ROOT/generated/iam.json" >/dev/null
+          jq -e '
+            keys == [
+              "environment_compartment_key",
+              "environment_security_zone_display_name",
+              "project_compartment_key",
+              "schema_version"
+            ] and
+            .schema_version == 1 and
+            all(
+              [
+                .environment_compartment_key,
+                .environment_security_zone_display_name,
+                .project_compartment_key
+              ][];
+              type == "string" and length > 0
+            )
+          ' "$GITHUB_WORKSPACE/request/$OP04_ROOT/generated/project-security-zone-exception.json" >/dev/null
+          jq -e --slurpfile exception \
+            "$GITHUB_WORKSPACE/request/$OP04_ROOT/generated/project-security-zone-exception.json" '
+              .compartments_configuration.compartments |
+              keys == [$exception[0].project_compartment_key]
+            ' "$GITHUB_WORKSPACE/request/$OP04_ROOT/generated/iam.json" >/dev/null
           if rg -n '__[A-Za-z0-9_]+__' \
             "$GITHUB_WORKSPACE/request/$OP04_ROOT"; then
             echo "Unresolved OP04 placeholder." >&2
@@ -427,28 +458,27 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: bash
         env:
-          ENVIRONMENT: ${{ steps.target.outputs.environment }}
+          OP04_ROOT: ${{ steps.target.outputs.root }}
           OCI_CLI_AUTH: instance_principal
           OCI_CLI_REGION: ${{ vars.REGION }}
         run: |
           set -euo pipefail
+          exception_file="$GITHUB_WORKSPACE/request/$OP04_ROOT/generated/project-security-zone-exception.json"
+          project_compartment_key="$(jq -er '.project_compartment_key' "$exception_file")"
+          environment_key="$(jq -er '.environment_compartment_key' "$exception_file")"
+          environment_zone_name="$(jq -er '.environment_security_zone_display_name' "$exception_file")"
           project_output="$(
             terraform -chdir="$GITHUB_WORKSPACE/ORCH" output -json \
               iam_resources
           )"
-          project_compartment_id="$(jq -er '
-            .compartments |
-            to_entries |
-            if length == 1 then .[0].value.id
-            else error("Expected exactly one OP04 project compartment")
-            end
-          ' <<< "$project_output")"
-          environment_key="CMP-LZ-${ENVIRONMENT^^}-KEY"
+          project_compartment_id="$(jq -er \
+            --arg key "$project_compartment_key" \
+            '.compartments[$key].id' \
+            <<< "$project_output")"
           environment_compartment_id="$(jq -er \
             --arg key "$environment_key" \
             '.compartments[$key].id' \
             "$RUNNER_TEMP/compartments-dependency.json")"
-          environment_zone_name="sz-tgt-lz-${ENVIRONMENT}-environment"
           zones="$(
             oci cloud-guard security-zone-collection list-security-zones \
               --compartment-id "$environment_compartment_id" \
