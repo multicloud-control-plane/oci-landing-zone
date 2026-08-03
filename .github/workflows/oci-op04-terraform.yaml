@@ -222,7 +222,7 @@ jobs:
               "project_compartment_key",
               "schema_version"
             ] and
-            .schema_version == 1 and
+            .schema_version == 2 and
             all(
               [
                 .environment_compartment_key,
@@ -510,23 +510,28 @@ jobs:
             <<< "$zone" >/dev/null; then
             oci cloud-guard security-zone remove \
               --security-zone-id "$zone_id" \
-              --compartment-id "$project_compartment_id" \
-              --wait-for-state ACTIVE
+              --compartment-id "$project_compartment_id"
             result="applied"
           else
             result="already present"
           fi
-          verified_zone="$(
-            oci cloud-guard security-zone get --security-zone-id "$zone_id"
-          )"
-          if jq -e --arg id "$project_compartment_id" \
-            '.data["inherited-by-compartments"] | index($id) != null' \
-            <<< "$verified_zone" >/dev/null; then
-            echo "Project compartment still inherits the environment Security Zone." >&2
-            exit 1
-          fi
-          printf 'Project Security Zone exception: %s.\n' "$result" \
-            >> "$GITHUB_STEP_SUMMARY"
+          for attempt in {1..24}; do
+            verified_zone="$(
+              oci cloud-guard security-zone get --security-zone-id "$zone_id"
+            )"
+            if ! jq -e --arg id "$project_compartment_id" \
+              '.data["inherited-by-compartments"] | index($id) != null' \
+              <<< "$verified_zone" >/dev/null; then
+              printf 'Project Security Zone exception: %s.\n' "$result" \
+                >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [ "$attempt" -lt 24 ]; then
+              sleep 5
+            fi
+          done
+          echo "Security Zone inheritance did not converge." >&2
+          exit 1
 
   handoff:
     name: Generate project handoff after OP04

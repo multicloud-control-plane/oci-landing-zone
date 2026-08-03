@@ -474,7 +474,9 @@ local render(customer) =
   // project is removed from the inherited environment Security Zone after
   // OP04 applies, so the project GitOps contract can manage its NSGs.
   local project_security_zone_exception(environment, project) = {
-    schema_version: 1,
+    // Version 2 requires condition-based confirmation of OCI's asynchronous
+    // inherited-compartment update before OP04 reports success.
+    schema_version: 2,
     project_compartment_key: n.key_global('CMP', [environment, project]),
     environment_compartment_key: n.key_global('CMP', [environment]),
     environment_security_zone_display_name:
