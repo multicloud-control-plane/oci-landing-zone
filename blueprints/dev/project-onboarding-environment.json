@@ -55,7 +55,7 @@
   "schema_version": 2,
   "source": {
     "commit_sha": "b91a03bad9e1ca688d0e1e0f07e240149f0d5c8c",
-    "repository": "multicloud-control-plane/mccp-cloudops-lz",
+    "repository": "multicloud-control-plane/oci-landing-zone",
     "run_id": "30006088768",
     "workflow": "oci-op02-terraform.yaml"
   },
