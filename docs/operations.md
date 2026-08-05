@@ -16,7 +16,7 @@ environment. OP04 accepts one project target per run and remains a Cloud
 Operator operation.
 
 The generated OP01 final security configuration intentionally omits the
-OE `v3.1.0` `SZ-TGT-LZ-SHARED-NETWORK-KEY` child target. OCI requires a Compute
+reviewed OE `master` `SZ-TGT-LZ-SHARED-NETWORK-KEY` child target. OCI requires a Compute
 instance and its subnet to belong to the same Security Zone. The shared network
 and platform hierarchies instead inherit the common parent CIS zone. Do not
 restore a child-specific network zone unless the upstream template has been
@@ -105,5 +105,6 @@ changes with `ignore_changes`.
 
 After OP04, use `project-foundation-handoff.json` for machine processing and
 `environment_information.md` for people. The workflow does not create or write to
-a project repository. The three workload-role compartment values intentionally
-contain the same official OE project compartment OCID.
+a project repository. The schema-3 handoff has a project root plus distinct
+Application, Database, and Infrastructure child-compartment OCIDs; it does not
+use role aliases.
