@@ -206,36 +206,7 @@
    },
    "logging_configuration": {
       "default_compartment_id": "CMP-LZ-SECURITY-KEY",
-      "flow_logs": {
-         "LOG-LZ-DEV-SUBNET-FLOW-KEY": {
-            "log_group_id": "LGRP-LZ-DEV-VCN-FLOW-KEY",
-            "target_compartment_ids": [
-               "CMP-LZ-DEV-NETWORK-KEY"
-            ],
-            "target_resource_type": "subnet"
-         },
-         "LOG-LZ-DEV-VCN-FLOW-KEY": {
-            "log_group_id": "LGRP-LZ-DEV-VCN-FLOW-KEY",
-            "target_compartment_ids": [
-               "CMP-LZ-DEV-NETWORK-KEY"
-            ],
-            "target_resource_type": "vcn"
-         },
-         "LOG-LZ-SUBNET-FLOW-KEY": {
-            "log_group_id": "LGRP-LZ-VCN-FLOW-KEY",
-            "target_compartment_ids": [
-               "CMP-LZ-NETWORK-KEY"
-            ],
-            "target_resource_type": "subnet"
-         },
-         "LOG-LZ-VCN-FLOW-KEY": {
-            "log_group_id": "LGRP-LZ-VCN-FLOW-KEY",
-            "target_compartment_ids": [
-               "CMP-LZ-NETWORK-KEY"
-            ],
-            "target_resource_type": "vcn"
-         }
-      },
+      "flow_logs": { },
       "log_groups": {
          "LGRP-LZ-DEV-VCN-FLOW-KEY": {
             "compartment_id": "CMP-LZ-DEV-SECURITY-KEY",

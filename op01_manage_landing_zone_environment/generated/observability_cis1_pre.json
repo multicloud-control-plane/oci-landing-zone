@@ -204,6 +204,9 @@
          }
       }
    },
+   "logging_configuration": {
+      "flow_logs": { }
+   },
    "notifications_configuration": {
       "default_compartment_id": "CMP-LZ-SECURITY-KEY",
       "topics": {
