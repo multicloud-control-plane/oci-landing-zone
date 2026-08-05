@@ -1,0 +1,6 @@
+{
+   "environment_compartment_key": "CMP-LZ-DEV-KEY",
+   "environment_security_zone_display_name": "sz-tgt-lz-dev-environment",
+   "project_compartment_key": "CMP-LZ-DEV-PROJECT1-DEMO2-KEY",
+   "schema_version": 2
+}
