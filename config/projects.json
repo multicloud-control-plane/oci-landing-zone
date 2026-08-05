@@ -1,7 +1,8 @@
 {
   "dev": [
     "mccp-v2",
-    "project1-demo"
+    "project1-demo",
+    "project1-demo2"
   ],
   "prod": [],
   "test": [],
