@@ -466,7 +466,9 @@ local render(customer) =
         },
       },
       identity_domain_groups_configuration:
-        tbac.project_groups(n, environment, project),
+        iam.identity_domain_groups_configuration {
+          groups: tbac.project_groups(n, environment, project).groups,
+        },
       policies_configuration:
         iam.policies_configuration {
           supplied_policies: runner_policies,
