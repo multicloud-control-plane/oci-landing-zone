@@ -363,11 +363,18 @@ local render(customer) =
       },
     };
 
+  // VCN/subnet flow logs are deliberately out of this operating model's
+  // observability scope. Removing them also avoids provisioning unused
+  // logging resources for each Landing Zone environment.
   local fixed_observability(document) =
     with_notification_recipient(
       document,
       customer.notification_email,
-    );
+    ) {
+      logging_configuration+: {
+        flow_logs: {},
+      },
+    };
 
   // The reviewed OE master revision creates a child-specific zone for the shared network
   // compartment. That separates its subnets from platform resources, which
