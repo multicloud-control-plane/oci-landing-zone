@@ -5,9 +5,10 @@
 // adapter only separates those definitions along the product's established
 // state and ownership boundaries.
 local lz = import 'landing_zone.libsonnet';
-local platforms = import 'platforms.libsonnet';
+local publication_network = import 'lib/publication_network.libsonnet';
 local render_context = import 'render_context.libsonnet';
 local project_catalog = import 'projects.json';
+local tbac = import 'tbac.libsonnet';
 
 local global_policy_keys = [
   'PCY-AUDITING-ADMIN-KEY',
@@ -273,12 +274,13 @@ local render(customer) =
         base_group_keys,
       ),
     policies_configuration: op00_policies {
-      supplied_policies: op00_policies.supplied_policies {
-        'PCY-SERVICES-ADMIN-KEY':
-          without_retired_osms_statement(
-            op00_policies.supplied_policies['PCY-SERVICES-ADMIN-KEY'],
-          ),
-      },
+      supplied_policies:
+        (op00_policies.supplied_policies {
+          'PCY-SERVICES-ADMIN-KEY':
+            without_retired_osms_statement(
+              op00_policies.supplied_policies['PCY-SERVICES-ADMIN-KEY'],
+            ),
+        }) + tbac.common_policies,
     },
   };
   local op01_iam = {
@@ -320,6 +322,10 @@ local render(customer) =
             },
         },
       },
+      policies_configuration:
+        iam.policies_configuration {
+          supplied_policies: tbac.environment_policies(n, environment),
+        },
     };
 
   local op02_network(environment) =
@@ -331,7 +337,7 @@ local render(customer) =
       network_configuration: {
         network_configuration_categories: {
           [environment]:
-            platforms.publication_network_category(
+            publication_network.network_category(
               category,
               n,
               [],
@@ -363,7 +369,7 @@ local render(customer) =
       customer.notification_email,
     );
 
-  // OE v3.1.0 creates a child-specific zone for the shared network
+  // The reviewed OE master revision creates a child-specific zone for the shared network
   // compartment. That separates its subnets from platform resources, which
   // inherit the parent CIS zone, and OCI rejects those cross-zone
   // associations. Until the upstream generator uses one zone at the common
@@ -398,9 +404,7 @@ local render(customer) =
       n.key_global('PCY', [environment, project, 'ADMIN', 'SEC']),
     ];
     local project_compartment =
-      landing_zone.children[environment_key]
-        .children[project_container_key]
-        .children[project_key];
+      tbac.project_compartment(n, environment, project);
     local runner_principal =
       'allow dynamic-group dg-mccp-platform-runner';
     local group_principal =
@@ -462,13 +466,10 @@ local render(customer) =
         },
       },
       identity_domain_groups_configuration:
-        selected_groups(
-          iam.identity_domain_groups_configuration,
-          [group_key],
-        ),
+        tbac.project_groups(n, environment, project),
       policies_configuration:
         iam.policies_configuration {
-          supplied_policies: source_policies + runner_policies,
+          supplied_policies: runner_policies,
         },
     };
 
@@ -489,7 +490,9 @@ local render(customer) =
     'op00_manage_global_landing_zone/generated/iam.json': op00_iam,
     'op01_manage_landing_zone_environment/generated/iam.json': op01_iam,
     'op01_manage_landing_zone_environment/generated/governance.json':
-      full.governance,
+      full.governance {
+        tags_configuration+: tbac.governance.tags_configuration,
+      },
     'op01_manage_landing_zone_environment/generated/network.json':
       op01_network,
     'op01_manage_landing_zone_environment/generated/observability_cis1_pre.json':
