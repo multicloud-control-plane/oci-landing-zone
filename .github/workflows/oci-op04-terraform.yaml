@@ -17,7 +17,7 @@ permissions:
   contents: read
 
 env:
-  OE_REVISION: 172809932c53467ab20ec6d1b44290a487211b36
+  OE_REVISION: dab13856ba6701c45baafc163780bb76562c039a
   ORCHESTRATOR_REVISION: fcf1d7f02c0b4faa1ff55f1776c396452dd51761
 
 jobs:
@@ -211,6 +211,8 @@ jobs:
             "$render_config/render.jsonnet"
           cp "$GITHUB_WORKSPACE/trusted/config/render.libsonnet" \
             "$render_config/render.libsonnet"
+          cp "$GITHUB_WORKSPACE/trusted/config/tbac.libsonnet" \
+            "$render_config/tbac.libsonnet"
           cp "$GITHUB_WORKSPACE/request/config/customer.jsonnet" \
             "$render_config/customer.jsonnet"
           if [ "$OPERATION" = "retirement" ]; then
@@ -251,7 +253,7 @@ jobs:
             done < <(jq -r --arg environment "$environment" \
               '.[$environment][]' "$render_config/projects.json")
           done
-          jsonnet -J "$RUNNER_TEMP/oe/gen" \
+          jsonnet -J "$RUNNER_TEMP/oe/gen" -J "$RUNNER_TEMP/oe" \
             --multi "$regenerated" "$render_config/render.jsonnet"
           diff -u \
             "$regenerated/$OP04_ROOT/generated/iam.json" \

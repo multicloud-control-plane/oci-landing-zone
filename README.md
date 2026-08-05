@@ -48,7 +48,7 @@ variables:
 The runner uses OCI Instance Principal authentication. Do not store API keys or
 private keys in this repository.
 
-This preview supports only the commercial OCI realm `oc1` and standard
+This installation supports only the commercial OCI realm `oc1` and standard
 commercial region identifiers such as `eu-frankfurt-1`. Its validators reject
 Dedicated Region Cloud@Customer, government, and other non-`oc1` identifiers.
 
@@ -62,12 +62,12 @@ Dedicated Region Cloud@Customer, government, and other non-`oc1` identifiers.
 - Keep OP04 under Cloud Operator ownership. Project Teams start after handoff.
 - Do not run local applies after the permanent GitOps flow is active.
 
-The configuration pins OE `v3.1.0`, Orchestrator `release-2.1.4`, and its OCI
-database module dependency to immutable revisions. Workflows install Terraform
-`1.15.8`; the Orchestrator's `>= 1.5.0` declaration is its OCI Resource Manager
-compatibility floor, not a cap on this CLI execution path. OE `v3.1.0` creates
-one compartment per project. The three workload-role fields in the handoff all
-reference that same compartment.
+The configuration pins the reviewed OCI Landing Zone Operating Entities
+`master` revision, Orchestrator `v2.1.3`, and its OCI database module
+dependency to immutable revisions. Workflows install Terraform `1.15.8`. The
+official TBAC add-on creates a project root with Application, Database, and
+Infrastructure child compartments; schema-3 handoffs provide their distinct
+workload OCIDs.
 
 After OP04, download `project-foundation-handoff.json` for the Multi-Cloud
 Control Plane and `environment_information.md` for the project team. Neither file

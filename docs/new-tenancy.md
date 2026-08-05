@@ -303,10 +303,11 @@ Only the exact OP02 dependency marker tested above may remain. It is not a
 customer value: the OP02 workflow reads the unique spokes route-table OCID from
 protected OP01 state, replaces the marker in a temporary copy, and fails closed
 before Terraform if it cannot resolve it. Do not edit generated files manually.
-The protected workflow regenerates changed phases from OE `v3.1.0` and rejects
+The protected workflow regenerates changed phases from the reviewed OE `master`
+revision and rejects
 drift.
 
-The protected adapter also omits OE `v3.1.0`'s child-specific shared-network
+The protected adapter also omits the reviewed OE `master` revision's child-specific shared-network
 Security Zone target. This is a narrow workaround for the upstream template:
 OCI rejects a platform Compute instance in the parent CIS zone when its subnet
 is in the child zone. The shared network and platform hierarchies therefore
@@ -485,18 +486,35 @@ sudo -u github-runner tee .path >/dev/null <<'EOF'
 EOF
 ```
 
+OP03 cloud-init also creates the runner-owned key pair used for project VM
+creation and supported Ansible operations. Verify its metadata without printing
+either key:
+
+```bash
+sudo -u github-runner test -r /home/github-runner/.ssh/oci_vm_key
+sudo -u github-runner test -r /home/github-runner/.ssh/oci_vm_key.pub
+stat -c '%U:%G %a %n' \
+  /home/github-runner/.ssh \
+  /home/github-runner/.ssh/oci_vm_key \
+  /home/github-runner/.ssh/oci_vm_key.pub
+```
+
+The expected owner and group are `github-runner:github-runner`; the expected
+modes are `700`, `600`, and `644`, respectively. Do not copy the private key to
+GitHub, a project repository, a handoff artifact, or an operator workstation.
+
 Install or restart the service only after those files exist. Verify from the
 service account that `rg`, `jq`, and `python3.11` resolve through that exact
 path and that the environment values are visible to a diagnostic workflow.
 Verify `oci` and Ansible only after the execution action has installed them. Do
 not put tokens or secret bundles in either file.
 
-OP04 uses the official OE `v3.1.0` project model: one project compartment,
-one administrator group, and the OE policies. The MCCP runner policies are the
-only project-IAM extension. They grant NSG management only in the exact project
-compartment, never across the shared environment network compartment. The
-resulting handoff repeats the same project compartment OCID in its three
-workload-role fields for compatibility.
+OP04 uses the official OCI TBAC add-on model: a project root and Application,
+Database, and Infrastructure child compartments. Human project groups and their
+target compartments receive the `tn-lzp-proj-role` tags; generic TBAC policies
+govern those tags. The MCCP runner policies are the only project-IAM extension
+and remain narrow dynamic-group permissions. The schema-3 handoff contains the
+root and three distinct workload OCIDs; it never emits role aliases.
 
 The project-specific GitOps policy is attached inside the exact project
 compartment, alongside the OE administrator policy. This keeps the project
