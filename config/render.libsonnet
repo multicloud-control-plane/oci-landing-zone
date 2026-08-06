@@ -89,6 +89,19 @@ local environment_category(categories, vcn_key) =
     'expected one network category for ' + vcn_key;
   matches[0];
 
+// OE creates baseline NSGs for every configured project in the shared-project
+// VCN. In this MVP, OP04 creates project compartments and project GitOps owns
+// the NSGs, so OP02 must publish only the shared network resources.
+local without_project_network_security_groups(category) =
+  category {
+    vcns: {
+      [key]: category.vcns[key] {
+        network_security_groups: {},
+      }
+      for key in std.objectFields(category.vcns)
+    },
+  };
+
 local drg_route_statement_key(distribution_key) =
   std.strReplace(
     std.strReplace(distribution_key, 'DRGRD-', 'DRGRDS-'),
@@ -397,32 +410,34 @@ local render(customer) =
     local category = environment_category(categories, vcn_key);
     local attachment_key = n.key('DRGATT', [environment, 'PROJ']);
     local attachment = full_drg.drg_attachments[attachment_key];
+    local published_category = publication_network.network_category(
+      category,
+      n,
+      [],
+      false,
+    );
+    local category_with_drg =
+      published_category {
+        non_vcn_specific_gateways+: {
+          inject_into_existing_drgs+: {
+            [drg_key]+: {
+              drg_id: drg_key,
+              drg_attachments+: {
+                [attachment_key]:
+                  attachment {
+                    drg_route_table_id: '__DRG_SPOKES_ROUTE_TABLE_OCID__',
+                    drg_route_table_key: null,
+                  },
+              },
+            },
+          },
+        },
+      };
     {
       network_configuration: {
         network_configuration_categories: {
           [environment]:
-            publication_network.network_category(
-              category,
-              n,
-              [],
-              false,
-            ) {
-              non_vcn_specific_gateways+: {
-                inject_into_existing_drgs+: {
-                  [drg_key]+: {
-                    drg_id: drg_key,
-                    drg_attachments+: {
-                      [attachment_key]:
-                        attachment {
-                          drg_route_table_id:
-                            '__DRG_SPOKES_ROUTE_TABLE_OCID__',
-                          drg_route_table_key: null,
-                        },
-                    },
-                  },
-                },
-              },
-            },
+            without_project_network_security_groups(category_with_drg),
         },
       },
     };
