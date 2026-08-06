@@ -375,28 +375,28 @@ approval, merge, and verify the apply before continuing:
 
 1. Set OP00 `operation.json` to `"enabled": true`.
 2. Set OP01 to `"enabled": true, "stage": "core"`.
-3. Set the selected OP02 environment to `"enabled": true`.
-4. Download the successful OP02
+3. If MCCP execution is hosted in this tenancy, deploy OP03 with
+   `"stage": "infrastructure"`.
+4. Create its restricted OCI Bastion, record the assigned private endpoint
+   `/32` in `platform_bastion_private_endpoint_cidr`, and apply the focused
+   OP01 network update described below.
+5. Replace the OP03 identity placeholders, using `PROJECT_STATE_BUCKET` for
+   `__STATE_BUCKET_NAME__`, move OP03 to `"stage": "identity"`, and apply the
+   focused identity request with the foundation runner. OCI must create
+   `dg-mccp-platform-runner` before OP02 compiles its runner policies.
+6. Validate the new private runner and its Instance Principal identity. Leave
+   it unregistered until the project repository exists, then register it in an
+   organization runner group restricted to the selected project repositories.
+   This GitHub Free MVP uses that selected-repository scope; a paid plan can
+   add stronger environment and reviewer controls described in the final
+   hardening guide.
+7. Set the selected OP02 environment to `"enabled": true`.
+8. Download the successful OP02
    `project-onboarding-<environment>-<commit>` artifact, review it, and commit
    it to the protected blueprint path in
    `.github/project-onboarding-contract.json`.
-5. Move OP01 to `"stage": "pre"`.
-6. Move OP01 to `"stage": "final"`.
-7. If MCCP execution is hosted in this tenancy, deploy OP03 first with
-   `"stage": "infrastructure"`.
-8. Create its restricted OCI Bastion, record the assigned private endpoint
-   `/32` in `platform_bastion_private_endpoint_cidr`, and apply the focused
-   OP01 network update described below.
-9. Replace the OP03 identity placeholders, using `PROJECT_STATE_BUCKET` for
-   `__STATE_BUCKET_NAME__`, move OP03 to
-   `"stage": "identity"`, and apply the focused identity request with the
-   foundation runner.
-10. Validate the new private runner and its Instance Principal identity. Leave
-    it unregistered until the project repository exists, then register it in an
-    organization runner group restricted to the selected project repositories.
-    This GitHub Free MVP uses that selected-repository scope; a paid plan can
-    add stronger environment and reviewer controls described in the final
-    hardening guide.
+9. Move OP01 to `"stage": "pre"`.
+10. Move OP01 to `"stage": "final"`.
 11. Add one project name to `config/projects.json`, generate
     `op04:<environment>-<project>`, and submit the three-file OP04 request:
     the catalog change, `generated/iam.json`, and the generated,
@@ -516,13 +516,10 @@ govern those tags. The MCCP runner policies are the only project-IAM extension
 and remain narrow dynamic-group permissions. The schema-3 handoff contains the
 root and three distinct workload OCIDs; it never emits role aliases.
 
-The project-specific GitOps policy is attached inside the exact project
-compartment, alongside the OE administrator policy. This keeps the project
-compartment, its policy, and its isolated OP04 state in one lifecycle boundary.
-The network and security GitOps policies remain attached to the environment
-compartment because they target the shared `NETWORK` and `SECURITY` child
-compartments. Do not move the project policy to the shared `PROJECTS` parent or
-broaden any of these named scopes.
+OP02 creates the three fixed GitOps runner policies once per environment: the
+`PROJECTS` subtree, shared `NETWORK`, and shared `SECURITY`. They support only
+the MVP Compute, ADB, and project-NSG contracts. OP04 keeps the official TBAC
+hierarchy and does not create per-project runner policies.
 
 OCI treats NSG create/delete as changes to both the NSG and its VCN. The
 network GitOps policy must retain the generated conditional `manage vcns`
