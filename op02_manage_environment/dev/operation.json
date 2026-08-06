@@ -1,5 +1,5 @@
 {
   "contract_version": 1,
-  "enabled": true,
-  "environment": "dev"
+  "environment": "dev",
+  "enabled": true
 }
