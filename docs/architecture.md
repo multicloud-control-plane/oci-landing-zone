@@ -7,8 +7,8 @@ so reviewers can understand the scope of each plan.
 flowchart LR
   B[Bootstrap readiness] --> O0[OP00 global IAM]
   O0 --> O1[OP01 shared foundation]
-  O1 --> O2[OP02 environment]
-  O2 -. optional .-> O3[OP03 platform]
+  O1 --> O3[OP03 platform, when hosted here]
+  O3 --> O2[OP02 environment]
   O2 --> O4[OP04 project]
   O4 --> H[Project handoff]
 ```
@@ -91,14 +91,12 @@ workload targets. Compute uses Application, ADB uses Database, and NSGs use
 Infrastructure. The MCCP runner extension remains a narrow dynamic-group
 exception and does not grant a human TBAC role.
 
-The adapter attaches the project-specific GitOps policy inside the exact
-project compartment, alongside the human administrator policy created by OE.
-The policy and project therefore share one OP04 lifecycle boundary. Retiring
-one project cannot alter a sibling project's policy reference. The shared
-network and security GitOps policies remain attached to the environment
-compartment because their statements target the environment's shared
-`NETWORK` and `SECURITY` child compartments. Each policy still grants access
-only to its named target.
+OP02 creates one fixed set of three GitOps runner policies for each
+environment: the `PROJECTS` subtree, shared `NETWORK`, and shared `SECURITY`.
+They cover only the MVP workload contracts—Compute, ADB, and project NSGs—and
+are not repeated for every project. The runner is a dynamic group rather than
+a human TBAC role; human access remains governed by the official TBAC
+policies. The environment-wide runner scope is intentional for this MVP.
 
 Creating or deleting a project NSG also changes its shared VCN. The network
 GitOps policy therefore adds OCI's narrowly conditioned `manage vcns` grant

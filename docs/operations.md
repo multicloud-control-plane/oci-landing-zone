@@ -11,9 +11,11 @@ Use this page to find the configuration and success condition for each phase.
 | OP03 | `op03_manage_platform_gitops/` | Required platform IAM, network, and compute exist |
 | OP04 | `op04_manage_project/{environment}/{project}/` | Official OE project compartment, group, policies, and both handoff files exist |
 
-OP03 is optional when the platform is hosted elsewhere. OP02 repeats per
-environment. OP04 accepts one project target per run and remains a Cloud
-Operator operation.
+OP03 is optional only when the platform is hosted elsewhere. When it is hosted
+in this tenancy, complete its `infrastructure` and `identity` stages before the
+first OP02: OCI compiles the OP02 runner policies against the existing dynamic
+group. OP02 repeats per environment. OP04 accepts one project target per run
+and remains a Cloud Operator operation.
 
 The generated OP01 final security configuration intentionally omits the
 reviewed OE `master` `SZ-TGT-LZ-SHARED-NETWORK-KEY` child target. OCI requires a Compute
@@ -35,11 +37,11 @@ This preserves the governed project pull-request lifecycle for approved project
 NSGs, including deletion. Project Teams must not remove Security Zones manually
 or receive Security Zone permissions.
 
-The project-specific runner policy is created inside the same project
-compartment. This keeps the compartment and policy in one isolated OP04
-lifecycle boundary. Runner policies that target the shared `NETWORK` and
-`SECURITY` compartments remain attached at the environment boundary. Keep
-these generated scopes unchanged when onboarding or retiring a project.
+OP02 creates the fixed MVP runner policies once per environment. They cover
+the `PROJECTS` subtree, shared `NETWORK`, and shared `SECURITY` for Compute,
+ADB, and project NSGs. OP04 does not create a runner policy; it only creates
+the official TBAC project structure and the protected Security Zone exception.
+Keep these generated scopes unchanged when onboarding or retiring a project.
 
 The Hub management security list must allow SSH only from the platform
 Bastion's current private endpoint `/32`. Retrieve that address from OCI,
