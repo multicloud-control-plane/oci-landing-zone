@@ -37,7 +37,332 @@
                   "is_create_igw": false,
                   "is_ipv6enabled": false,
                   "is_oracle_gua_allocation_enabled": false,
-                  "network_security_groups": { },
+                  "network_security_groups": {
+                     "NSG-FRA-LZ-DEV-MCCP-V2-APP-KEY": {
+                        "compartment_id": "CMP-LZ-DEV-MCCP-V2-KEY",
+                        "display_name": "nsg-fra-lz-dev-mccp-v2-app",
+                        "egress_rules": {
+                           "anywhere": {
+                              "description": "Allow all outbound traffic to 0.0.0.0/0 over TCP",
+                              "dst": "0.0.0.0/0",
+                              "dst_type": "CIDR_BLOCK",
+                              "protocol": "TCP",
+                              "stateless": false
+                           }
+                        },
+                        "ingress_rules": {
+                           "http_80": {
+                              "description": "Allow inbound from NSG nsg-fra-lz-dev-mccp-v2-web over HTTP",
+                              "dst_port_max": 80,
+                              "dst_port_min": 80,
+                              "protocol": "TCP",
+                              "src": "NSG-FRA-LZ-DEV-MCCP-V2-WEB-KEY",
+                              "src_type": "NETWORK_SECURITY_GROUP",
+                              "stateless": false
+                           },
+                           "https_443": {
+                              "description": "Allow inbound from NSG nsg-fra-lz-dev-mccp-v2-web over HTTPS",
+                              "dst_port_max": 443,
+                              "dst_port_min": 443,
+                              "protocol": "TCP",
+                              "src": "NSG-FRA-LZ-DEV-MCCP-V2-WEB-KEY",
+                              "src_type": "NETWORK_SECURITY_GROUP",
+                              "stateless": false
+                           },
+                           "ssh_22": {
+                              "description": "Allow inbound traffic from Hub management subnet over SSH",
+                              "dst_port_max": 22,
+                              "dst_port_min": 22,
+                              "protocol": "TCP",
+                              "src": "10.200.1.0/24",
+                              "src_type": "CIDR_BLOCK",
+                              "stateless": false
+                           }
+                        }
+                     },
+                     "NSG-FRA-LZ-DEV-MCCP-V2-DB-KEY": {
+                        "compartment_id": "CMP-LZ-DEV-MCCP-V2-KEY",
+                        "display_name": "nsg-fra-lz-dev-mccp-v2-db",
+                        "egress_rules": {
+                           "anywhere": {
+                              "description": "Allow all outbound traffic to 0.0.0.0/0 over TCP",
+                              "dst": "0.0.0.0/0",
+                              "dst_type": "CIDR_BLOCK",
+                              "protocol": "TCP",
+                              "stateless": false
+                           }
+                        },
+                        "ingress_rules": {
+                           "db_1521": {
+                              "description": "Allow inbound from NSG nsg-fra-lz-dev-mccp-v2-app over TCP 1521",
+                              "dst_port_max": 1521,
+                              "dst_port_min": 1521,
+                              "protocol": "TCP",
+                              "src": "NSG-FRA-LZ-DEV-MCCP-V2-APP-KEY",
+                              "src_type": "NETWORK_SECURITY_GROUP",
+                              "stateless": false
+                           }
+                        }
+                     },
+                     "NSG-FRA-LZ-DEV-MCCP-V2-WEB-KEY": {
+                        "compartment_id": "CMP-LZ-DEV-MCCP-V2-KEY",
+                        "display_name": "nsg-fra-lz-dev-mccp-v2-web",
+                        "egress_rules": {
+                           "anywhere": {
+                              "description": "Allow all outbound traffic to 0.0.0.0/0 over TCP",
+                              "dst": "0.0.0.0/0",
+                              "dst_type": "CIDR_BLOCK",
+                              "protocol": "TCP",
+                              "stateless": false
+                           }
+                        },
+                        "ingress_rules": {
+                           "http_80": {
+                              "description": "Allow inbound traffic from Hub LB subnet over HTTP",
+                              "dst_port_max": 80,
+                              "dst_port_min": 80,
+                              "protocol": "TCP",
+                              "src": "10.200.0.0/24",
+                              "src_type": "CIDR_BLOCK",
+                              "stateless": false
+                           },
+                           "https_443": {
+                              "description": "Allow inbound traffic from Hub LB subnet over HTTPS",
+                              "dst_port_max": 443,
+                              "dst_port_min": 443,
+                              "protocol": "TCP",
+                              "src": "10.200.0.0/24",
+                              "src_type": "CIDR_BLOCK",
+                              "stateless": false
+                           },
+                           "ssh_22": {
+                              "description": "Allow inbound traffic from Hub management subnet over SSH",
+                              "dst_port_max": 22,
+                              "dst_port_min": 22,
+                              "protocol": "TCP",
+                              "src": "10.200.1.0/24",
+                              "src_type": "CIDR_BLOCK",
+                              "stateless": false
+                           }
+                        }
+                     },
+                     "NSG-FRA-LZ-DEV-PROJECT1-DEMO-APP-KEY": {
+                        "compartment_id": "CMP-LZ-DEV-PROJECT1-DEMO-KEY",
+                        "display_name": "nsg-fra-lz-dev-project1-demo-app",
+                        "egress_rules": {
+                           "anywhere": {
+                              "description": "Allow all outbound traffic to 0.0.0.0/0 over TCP",
+                              "dst": "0.0.0.0/0",
+                              "dst_type": "CIDR_BLOCK",
+                              "protocol": "TCP",
+                              "stateless": false
+                           }
+                        },
+                        "ingress_rules": {
+                           "http_80": {
+                              "description": "Allow inbound from NSG nsg-fra-lz-dev-project1-demo-web over HTTP",
+                              "dst_port_max": 80,
+                              "dst_port_min": 80,
+                              "protocol": "TCP",
+                              "src": "NSG-FRA-LZ-DEV-PROJECT1-DEMO-WEB-KEY",
+                              "src_type": "NETWORK_SECURITY_GROUP",
+                              "stateless": false
+                           },
+                           "https_443": {
+                              "description": "Allow inbound from NSG nsg-fra-lz-dev-project1-demo-web over HTTPS",
+                              "dst_port_max": 443,
+                              "dst_port_min": 443,
+                              "protocol": "TCP",
+                              "src": "NSG-FRA-LZ-DEV-PROJECT1-DEMO-WEB-KEY",
+                              "src_type": "NETWORK_SECURITY_GROUP",
+                              "stateless": false
+                           },
+                           "ssh_22": {
+                              "description": "Allow inbound traffic from Hub management subnet over SSH",
+                              "dst_port_max": 22,
+                              "dst_port_min": 22,
+                              "protocol": "TCP",
+                              "src": "10.200.1.0/24",
+                              "src_type": "CIDR_BLOCK",
+                              "stateless": false
+                           }
+                        }
+                     },
+                     "NSG-FRA-LZ-DEV-PROJECT1-DEMO-DB-KEY": {
+                        "compartment_id": "CMP-LZ-DEV-PROJECT1-DEMO-KEY",
+                        "display_name": "nsg-fra-lz-dev-project1-demo-db",
+                        "egress_rules": {
+                           "anywhere": {
+                              "description": "Allow all outbound traffic to 0.0.0.0/0 over TCP",
+                              "dst": "0.0.0.0/0",
+                              "dst_type": "CIDR_BLOCK",
+                              "protocol": "TCP",
+                              "stateless": false
+                           }
+                        },
+                        "ingress_rules": {
+                           "db_1521": {
+                              "description": "Allow inbound from NSG nsg-fra-lz-dev-project1-demo-app over TCP 1521",
+                              "dst_port_max": 1521,
+                              "dst_port_min": 1521,
+                              "protocol": "TCP",
+                              "src": "NSG-FRA-LZ-DEV-PROJECT1-DEMO-APP-KEY",
+                              "src_type": "NETWORK_SECURITY_GROUP",
+                              "stateless": false
+                           }
+                        }
+                     },
+                     "NSG-FRA-LZ-DEV-PROJECT1-DEMO-WEB-KEY": {
+                        "compartment_id": "CMP-LZ-DEV-PROJECT1-DEMO-KEY",
+                        "display_name": "nsg-fra-lz-dev-project1-demo-web",
+                        "egress_rules": {
+                           "anywhere": {
+                              "description": "Allow all outbound traffic to 0.0.0.0/0 over TCP",
+                              "dst": "0.0.0.0/0",
+                              "dst_type": "CIDR_BLOCK",
+                              "protocol": "TCP",
+                              "stateless": false
+                           }
+                        },
+                        "ingress_rules": {
+                           "http_80": {
+                              "description": "Allow inbound traffic from Hub LB subnet over HTTP",
+                              "dst_port_max": 80,
+                              "dst_port_min": 80,
+                              "protocol": "TCP",
+                              "src": "10.200.0.0/24",
+                              "src_type": "CIDR_BLOCK",
+                              "stateless": false
+                           },
+                           "https_443": {
+                              "description": "Allow inbound traffic from Hub LB subnet over HTTPS",
+                              "dst_port_max": 443,
+                              "dst_port_min": 443,
+                              "protocol": "TCP",
+                              "src": "10.200.0.0/24",
+                              "src_type": "CIDR_BLOCK",
+                              "stateless": false
+                           },
+                           "ssh_22": {
+                              "description": "Allow inbound traffic from Hub management subnet over SSH",
+                              "dst_port_max": 22,
+                              "dst_port_min": 22,
+                              "protocol": "TCP",
+                              "src": "10.200.1.0/24",
+                              "src_type": "CIDR_BLOCK",
+                              "stateless": false
+                           }
+                        }
+                     },
+                     "NSG-FRA-LZ-DEV-PROJECT1-DEMO2-APP-KEY": {
+                        "compartment_id": "CMP-LZ-DEV-PROJECT1-DEMO2-KEY",
+                        "display_name": "nsg-fra-lz-dev-project1-demo2-app",
+                        "egress_rules": {
+                           "anywhere": {
+                              "description": "Allow all outbound traffic to 0.0.0.0/0 over TCP",
+                              "dst": "0.0.0.0/0",
+                              "dst_type": "CIDR_BLOCK",
+                              "protocol": "TCP",
+                              "stateless": false
+                           }
+                        },
+                        "ingress_rules": {
+                           "http_80": {
+                              "description": "Allow inbound from NSG nsg-fra-lz-dev-project1-demo2-web over HTTP",
+                              "dst_port_max": 80,
+                              "dst_port_min": 80,
+                              "protocol": "TCP",
+                              "src": "NSG-FRA-LZ-DEV-PROJECT1-DEMO2-WEB-KEY",
+                              "src_type": "NETWORK_SECURITY_GROUP",
+                              "stateless": false
+                           },
+                           "https_443": {
+                              "description": "Allow inbound from NSG nsg-fra-lz-dev-project1-demo2-web over HTTPS",
+                              "dst_port_max": 443,
+                              "dst_port_min": 443,
+                              "protocol": "TCP",
+                              "src": "NSG-FRA-LZ-DEV-PROJECT1-DEMO2-WEB-KEY",
+                              "src_type": "NETWORK_SECURITY_GROUP",
+                              "stateless": false
+                           },
+                           "ssh_22": {
+                              "description": "Allow inbound traffic from Hub management subnet over SSH",
+                              "dst_port_max": 22,
+                              "dst_port_min": 22,
+                              "protocol": "TCP",
+                              "src": "10.200.1.0/24",
+                              "src_type": "CIDR_BLOCK",
+                              "stateless": false
+                           }
+                        }
+                     },
+                     "NSG-FRA-LZ-DEV-PROJECT1-DEMO2-DB-KEY": {
+                        "compartment_id": "CMP-LZ-DEV-PROJECT1-DEMO2-KEY",
+                        "display_name": "nsg-fra-lz-dev-project1-demo2-db",
+                        "egress_rules": {
+                           "anywhere": {
+                              "description": "Allow all outbound traffic to 0.0.0.0/0 over TCP",
+                              "dst": "0.0.0.0/0",
+                              "dst_type": "CIDR_BLOCK",
+                              "protocol": "TCP",
+                              "stateless": false
+                           }
+                        },
+                        "ingress_rules": {
+                           "db_1521": {
+                              "description": "Allow inbound from NSG nsg-fra-lz-dev-project1-demo2-app over TCP 1521",
+                              "dst_port_max": 1521,
+                              "dst_port_min": 1521,
+                              "protocol": "TCP",
+                              "src": "NSG-FRA-LZ-DEV-PROJECT1-DEMO2-APP-KEY",
+                              "src_type": "NETWORK_SECURITY_GROUP",
+                              "stateless": false
+                           }
+                        }
+                     },
+                     "NSG-FRA-LZ-DEV-PROJECT1-DEMO2-WEB-KEY": {
+                        "compartment_id": "CMP-LZ-DEV-PROJECT1-DEMO2-KEY",
+                        "display_name": "nsg-fra-lz-dev-project1-demo2-web",
+                        "egress_rules": {
+                           "anywhere": {
+                              "description": "Allow all outbound traffic to 0.0.0.0/0 over TCP",
+                              "dst": "0.0.0.0/0",
+                              "dst_type": "CIDR_BLOCK",
+                              "protocol": "TCP",
+                              "stateless": false
+                           }
+                        },
+                        "ingress_rules": {
+                           "http_80": {
+                              "description": "Allow inbound traffic from Hub LB subnet over HTTP",
+                              "dst_port_max": 80,
+                              "dst_port_min": 80,
+                              "protocol": "TCP",
+                              "src": "10.200.0.0/24",
+                              "src_type": "CIDR_BLOCK",
+                              "stateless": false
+                           },
+                           "https_443": {
+                              "description": "Allow inbound traffic from Hub LB subnet over HTTPS",
+                              "dst_port_max": 443,
+                              "dst_port_min": 443,
+                              "protocol": "TCP",
+                              "src": "10.200.0.0/24",
+                              "src_type": "CIDR_BLOCK",
+                              "stateless": false
+                           },
+                           "ssh_22": {
+                              "description": "Allow inbound traffic from Hub management subnet over SSH",
+                              "dst_port_max": 22,
+                              "dst_port_min": 22,
+                              "protocol": "TCP",
+                              "src": "10.200.1.0/24",
+                              "src_type": "CIDR_BLOCK",
+                              "stateless": false
+                           }
+                        }
+                     }
+                  },
                   "route_tables": {
                      "RT-FRA-LZ-DEV-PROJ-GENERIC-KEY": {
                         "display_name": "rt-fra-lz-dev-proj-generic",

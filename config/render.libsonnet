@@ -301,6 +301,69 @@ local render(customer) =
     local environment_key = n.key_global('CMP', [environment]);
     local project_container_key =
       n.key_global('CMP', [environment, 'PROJECTS']);
+    local environment_name = std.asciiLower(environment);
+    local runner_principal =
+      'allow dynamic-group dg-mccp-platform-runner';
+    local runner_policies = {
+      ['PCY-LZ-%s-GITOPS-PROJECTS-KEY' % std.asciiUpper(environment)]: {
+        name: 'pcy-lz-%s-gitops-projects' % environment_name,
+        description:
+          'MVP GitOps runner access for project Compute, ADB, and NSGs.',
+        compartment_id: environment_key,
+        statements: [
+          '%s to read all-resources in compartment cmp-lz-%s-projects' %
+          [runner_principal, environment_name],
+          '%s to manage instance-family in compartment cmp-lz-%s-projects' %
+          [runner_principal, environment_name],
+          '%s to manage volume-family in compartment cmp-lz-%s-projects' %
+          [runner_principal, environment_name],
+          '%s to manage autonomous-database-family in compartment cmp-lz-%s-projects' %
+          [runner_principal, environment_name],
+          '%s to use vnics in compartment cmp-lz-%s-projects' %
+          [runner_principal, environment_name],
+          '%s to manage network-security-groups in compartment cmp-lz-%s-projects' %
+          [runner_principal, environment_name],
+        ],
+      },
+      ['PCY-LZ-%s-GITOPS-NETWORK-KEY' % std.asciiUpper(environment)]: {
+        name: 'pcy-lz-%s-gitops-network' % environment_name,
+        description:
+          'MVP GitOps runner access for shared-network workload attachment.',
+        compartment_id: environment_key,
+        statements: [
+          '%s to use virtual-network-family in compartment cmp-lz-%s-network' %
+          [runner_principal, environment_name],
+          '%s to use subnets in compartment cmp-lz-%s-network' %
+          [runner_principal, environment_name],
+          '%s to use vnics in compartment cmp-lz-%s-network' %
+          [runner_principal, environment_name],
+          '%s to manage private-ips in compartment cmp-lz-%s-network' %
+          [runner_principal, environment_name],
+          "%s to manage vcns in compartment cmp-lz-%s-network where any {request.operation = 'CreateNetworkSecurityGroup', request.operation = 'DeleteNetworkSecurityGroup'}" %
+          [runner_principal, environment_name],
+        ],
+      },
+      ['PCY-LZ-%s-GITOPS-SECURITY-KEY' % std.asciiUpper(environment)]: {
+        name: 'pcy-lz-%s-gitops-security' % environment_name,
+        description:
+          'MVP GitOps runner access for approved shared-security services.',
+        compartment_id: environment_key,
+        statements: [
+          '%s to read ons-topics in compartment cmp-lz-%s-security' %
+          [runner_principal, environment_name],
+          '%s to use vaults in compartment cmp-lz-%s-security' %
+          [runner_principal, environment_name],
+          '%s to manage instance-images in compartment cmp-lz-%s-security' %
+          [runner_principal, environment_name],
+          '%s to use vss-family in compartment cmp-lz-%s-security' %
+          [runner_principal, environment_name],
+          '%s to use bastion in compartment cmp-lz-%s-security' %
+          [runner_principal, environment_name],
+          '%s to read logging-family in compartment cmp-lz-%s-security' %
+          [runner_principal, environment_name],
+        ],
+      },
+    };
     local environment_compartment = landing_zone.children[environment_key];
     local original_project_container =
       environment_compartment.children[project_container_key];
@@ -324,7 +387,8 @@ local render(customer) =
       },
       policies_configuration:
         iam.policies_configuration {
-          supplied_policies: tbac.environment_policies(n, environment),
+          supplied_policies:
+            tbac.environment_policies(n, environment) + runner_policies,
         },
     };
 
@@ -399,71 +463,11 @@ local render(customer) =
     };
 
   local project_identity(environment, project) =
-    local environment_key = n.key_global('CMP', [environment]);
     local project_container_key =
       n.key_global('CMP', [environment, 'PROJECTS']);
     local project_key = n.key_global('CMP', [environment, project]);
-    local group_key =
-      n.key_global('GRP', [environment, project, 'ADMIN']);
-    local policy_keys = [
-      n.key_global('PCY', [environment, project, 'ADMIN']),
-      n.key_global('PCY', [environment, project, 'ADMIN', 'NET']),
-      n.key_global('PCY', [environment, project, 'ADMIN', 'SEC']),
-    ];
     local project_compartment =
       tbac.project_compartment(n, environment, project);
-    local runner_principal =
-      'allow dynamic-group dg-mccp-platform-runner';
-    local group_principal =
-      "allow group 'id_lz_common'/'grp-lz-%s-%s-admin'" %
-      [std.asciiLower(environment), std.asciiLower(project)];
-    local runner_policy(policy, suffix) =
-      policy {
-        compartment_id:
-          if suffix == 'project' then project_key
-          else environment_key,
-        name: policy.name + '-gitops',
-        description:
-          'GitOps equivalent of the pinned OE project policy.',
-        statements: [
-          local converted =
-            std.strReplace(statement, group_principal, runner_principal);
-          if std.length(std.findSubstr(' where all{', converted)) > 0
-          then std.split(converted, ' where all{')[0]
-          else converted
-          for statement in policy.statements
-        ] + (
-          if suffix == 'project' then [
-            '%s to manage network-security-groups in compartment cmp-lz-%s-%s' %
-            [
-              runner_principal,
-              std.asciiLower(environment),
-              std.asciiLower(project),
-            ],
-          ] else if suffix == 'net' then [
-            "%s to manage vcns in compartment cmp-lz-%s-network where any {request.operation = 'CreateNetworkSecurityGroup', request.operation = 'DeleteNetworkSecurityGroup'}" %
-            [
-              runner_principal,
-              std.asciiLower(environment),
-            ],
-          ] else []
-        ),
-      };
-    local source_policies = {
-      [key]: iam.policies_configuration.supplied_policies[key]
-      for key in policy_keys
-    };
-
-    local runner_policies = {
-      [key + '-GITOPS']:
-        runner_policy(
-          source_policies[key],
-          if std.endsWith(key, '-NET-KEY') then 'net'
-          else if std.endsWith(key, '-SEC-KEY') then 'sec'
-          else 'project',
-        )
-      for key in policy_keys
-    };
     {
       compartments_configuration: {
         enable_delete: iam.compartments_configuration.enable_delete,
@@ -475,10 +479,6 @@ local render(customer) =
       identity_domain_groups_configuration:
         iam.identity_domain_groups_configuration {
           groups: tbac.project_groups(n, environment, project).groups,
-        },
-      policies_configuration:
-        iam.policies_configuration {
-          supplied_policies: runner_policies,
         },
     };
 

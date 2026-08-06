@@ -128,6 +128,15 @@
                "allow group 'id_lz_common'/'grp-iam-admin' to manage orm-config-source-providers in tenancy"
             ]
          },
+         "PCY-LZ-PROJECTS-COMMON-KEY": {
+            "compartment_id": "TENANCY-ROOT",
+            "description": "Policy allowing common permissions for all project teams.",
+            "name": "pcy-lz-projects-common",
+            "statements": [
+               "allow any-user to use cloud-shell in tenancy where request.principal.group.tag.tn-lzp-proj-role.proj-admin = '*'",
+               "allow any-user to inspect compartments in tenancy where request.principal.group.tag.tn-lzp-proj-role.proj-admin = '*'"
+            ]
+         },
          "PCY-SECURITY-ADMIN-KEY": {
             "compartment_id": "TENANCY-ROOT",
             "description": "Grants grp-security-admin security service administration access in the tenancy.",
@@ -154,6 +163,7 @@
                "allow service vulnerability-scanning-service to read repos in tenancy",
                "allow service vulnerability-scanning-service to read vnics in tenancy",
                "allow service vulnerability-scanning-service to read vnic-attachments in tenancy",
+               "allow service osmh to read instances in tenancy",
                "allow service blockstorage, oke, streaming, Fssoc1Prod, objectstorage-eu-frankfurt-1 to use keys in tenancy"
             ]
          }
