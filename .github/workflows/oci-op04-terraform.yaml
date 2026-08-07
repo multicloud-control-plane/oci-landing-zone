@@ -266,8 +266,7 @@ jobs:
           jq -e '
             keys == [
               "compartments_configuration",
-              "identity_domain_groups_configuration",
-              "policies_configuration"
+              "identity_domain_groups_configuration"
             ]
           ' "$iam_input" >/dev/null
           jq -e '

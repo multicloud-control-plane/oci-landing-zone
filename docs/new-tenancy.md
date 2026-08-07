@@ -515,7 +515,7 @@ Database, and Infrastructure child compartments. Human project groups and their
 target compartments receive the `tn-lzp-proj-role` tags; generic TBAC policies
 govern those tags. The MCCP runner policies are the only project-IAM extension
 and remain narrow dynamic-group permissions. The schema-3 handoff contains the
-root and three distinct workload OCIDs; it never emits role aliases.
+root and three distinct workload OCIDs.
 
 OP02 creates the three fixed GitOps runner policies once per environment: the
 `PROJECTS` subtree, shared `NETWORK`, and shared `SECURITY`. They support only

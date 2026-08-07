@@ -9,7 +9,7 @@ Use this page to find the configuration and success condition for each phase.
 | OP01 | `op01_manage_landing_zone_environment/` | Shared compartments, network, governance, and security match the plan |
 | OP02 | `op02_manage_environment/{environment}/` | Environment resources exist and `project-onboarding-environment.json` is validated |
 | OP03 | `op03_manage_platform_gitops/` | Required platform IAM, network, and compute exist |
-| OP04 | `op04_manage_project/{environment}/{project}/` | Official OE project compartment, group, policies, and both handoff files exist |
+| OP04 | `op04_manage_project/{environment}/{project}/` | Official OE project compartments, TBAC groups, Security Zone exception, and both handoff files exist |
 
 OP03 is optional only when the platform is hosted elsewhere. When it is hosted
 in this tenancy, complete its `infrastructure` and `identity` stages before the
@@ -108,5 +108,4 @@ changes with `ignore_changes`.
 After OP04, use `project-foundation-handoff.json` for machine processing and
 `environment_information.md` for people. The workflow does not create or write to
 a project repository. The schema-3 handoff has a project root plus distinct
-Application, Database, and Infrastructure child-compartment OCIDs; it does not
-use role aliases.
+Application, Database, and Infrastructure child-compartment OCIDs.
