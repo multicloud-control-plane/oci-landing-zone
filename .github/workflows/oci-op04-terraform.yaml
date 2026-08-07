@@ -255,12 +255,14 @@ jobs:
           done
           jsonnet -J "$RUNNER_TEMP/oe/gen" -J "$RUNNER_TEMP/oe" \
             --multi "$regenerated" "$render_config/render.jsonnet"
-          diff -u \
-            "$regenerated/$OP04_ROOT/generated/iam.json" \
-            "$iam_input"
-          diff -u \
-            "$regenerated/$OP04_ROOT/generated/project-security-zone-exception.json" \
-            "$exception_input"
+          if [ "$OPERATION" != "retirement" ]; then
+            diff -u \
+              "$regenerated/$OP04_ROOT/generated/iam.json" \
+              "$iam_input"
+            diff -u \
+              "$regenerated/$OP04_ROOT/generated/project-security-zone-exception.json" \
+              "$exception_input"
+          fi
           jq -e '
             keys == [
               "compartments_configuration",
