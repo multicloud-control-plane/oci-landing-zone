@@ -536,13 +536,18 @@ jobs:
           set -euo pipefail
           exception_file="$RUNNER_TEMP/base-project-security-zone-exception.json"
           project_compartment_key="$(jq -er '.project_compartment_key' "$exception_file")"
-          project_output="$(
-            terraform -chdir="$GITHUB_WORKSPACE/ORCH" output -json iam_resources
+          project_outputs="$(
+            terraform -chdir="$GITHUB_WORKSPACE/ORCH" output -json
           )"
+          if ! jq -e 'has("iam_resources")' <<< "$project_outputs" >/dev/null; then
+            echo "Project retirement Cloud Guard Target: already reconciled with partial state." \
+              >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           project_compartment_id="$(jq -er \
             --arg key "$project_compartment_key" \
-            '.compartments[$key].id' \
-            <<< "$project_output")"
+            '.iam_resources.value.compartments[$key].id' \
+            <<< "$project_outputs")"
           resources="$(
             oci search resource structured-search \
               --query-text "query all resources where compartmentId = '$project_compartment_id'" \
