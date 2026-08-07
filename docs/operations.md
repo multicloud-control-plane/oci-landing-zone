@@ -28,9 +28,9 @@ OP04 creates each delegated project compartment under the environment's
 `PROJECTS` compartment. Its generated
 `project-security-zone-exception.json` is protected, reviewable OP04 intent
 (schema version 2) that identifies the project child and inherited environment
-Security Zone. After a merged OP04 apply, the workflow uses that declaration to
-remove only the project child from inherited Security Zone enforcement and polls
-until OCI confirms the inherited-compartment update.
+Security Zone. After a merged OP04 apply, the workflow removes the project root
+and its direct Application, Database, and Infrastructure children from inherited
+Security Zone enforcement, then polls until OCI confirms every update.
 The foundation and environment Security Zones remain enforced, and OCI retains
 a standard Cloud Guard target for the removed delegated project compartment.
 This preserves the governed project pull-request lifecycle for approved project

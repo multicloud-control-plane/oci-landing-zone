@@ -62,8 +62,9 @@ The delegated project compartment is a different MCCP ownership boundary. OP04
 creates it below the environment's `PROJECTS` compartment. Its generated,
 reviewable `project-security-zone-exception.json` declaration identifies the
 child and inherited environment zone for the protected post-apply workflow to
-reconcile. It removes only that project child from inherited Security Zone
-enforcement. The foundation, environment, shared network, and platform zones
+reconcile. It removes the project root and its direct Application, Database, and
+Infrastructure children from inherited Security Zone enforcement. The foundation,
+environment, shared network, and platform zones
 remain enforced. OCI retains a standard Cloud Guard target for the removed
 delegated project compartment, while the Project Team's governed pull-request
 workflow can manage the approved project NSG lifecycle, including deletion.
