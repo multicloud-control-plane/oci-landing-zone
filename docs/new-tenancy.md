@@ -320,12 +320,12 @@ approved OP04 apply creates the project hierarchy, the protected workflow remove
 the project root and its direct Application, Database, and Infrastructure children
 from inherited environment Security Zone enforcement and verifies the result. The
 parent and environment Security Zones remain enforced. OCI keeps
-a standard Cloud Guard target for the removed delegated project compartment, so
+a standard Cloud Guard target for each removed delegated project compartment, so
 monitoring continues while the governed project pull-request workflow can
 create, update, and delete approved project NSGs. Do not perform this action
 manually or grant the project runner Security Zone permissions. When the Cloud
 Operator retires that project through the three-file OP04 retirement change,
-the protected workflow verifies and removes only this detached target before it
+the protected workflow verifies and removes only those detached targets before it
 applies the reviewed compartment destroy plan.
 
 ## 4. Configure GitHub and run readiness

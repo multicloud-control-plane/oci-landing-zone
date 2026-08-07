@@ -32,7 +32,7 @@ Security Zone. After a merged OP04 apply, the workflow removes the project root
 and its direct Application, Database, and Infrastructure children from inherited
 Security Zone enforcement, then polls until OCI confirms every update.
 The foundation and environment Security Zones remain enforced, and OCI retains
-a standard Cloud Guard target for the removed delegated project compartment.
+a standard Cloud Guard target for each removed delegated project compartment.
 This preserves the governed project pull-request lifecycle for approved project
 NSGs, including deletion. Project Teams must not remove Security Zones manually
 or receive Security Zone permissions.

@@ -65,7 +65,7 @@ child and inherited environment zone for the protected post-apply workflow to
 reconcile. It removes the project root and its direct Application, Database, and
 Infrastructure children from inherited Security Zone enforcement. The foundation,
 environment, shared network, and platform zones
-remain enforced. OCI retains a standard Cloud Guard target for the removed
+remain enforced. OCI retains a standard Cloud Guard target for each removed
 delegated project compartment, while the Project Team's governed pull-request
 workflow can manage the approved project NSG lifecycle, including deletion.
 This is an explicit MCCP adapter behavior; the reviewed OE `master` revision does not model the

@@ -535,6 +535,17 @@ jobs:
           set -euo pipefail
           exception_file="$RUNNER_TEMP/base-project-security-zone-exception.json"
           project_compartment_key="$(jq -er '.project_compartment_key' "$exception_file")"
+          project_compartment_keys_json="$(jq -ce \
+            --arg project_compartment_key "$project_compartment_key" '
+              .compartments_configuration.compartments[
+                $project_compartment_key
+              ] as $project |
+              [$project_compartment_key] + ($project.children | keys) |
+              unique |
+              if length == 4 then .
+              else error("Expected the TBAC project root and three child compartments")
+              end
+            ' "$RUNNER_TEMP/base-op04-iam.json")"
           project_outputs="$(
             terraform -chdir="$GITHUB_WORKSPACE/ORCH" output -json
           )"
@@ -543,49 +554,62 @@ jobs:
               >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          project_compartment_id="$(jq -er \
-            --arg key "$project_compartment_key" \
-            '.iam_resources.value.compartments[$key].id' \
-            <<< "$project_outputs")"
-          resources="$(
-            oci search resource structured-search \
-              --query-text "query all resources where compartmentId = '$project_compartment_id'" \
-              --limit 1000
-          )"
-          mapfile -t target_ids < <(
-            jq -r '
-              .data.items[]? |
-              select(.["resource-type"] == "CloudGuardTarget") |
-              .identifier
-            ' <<< "$resources"
+          mapfile -t project_compartment_ids < <(
+            jq -er --argjson keys "$project_compartment_keys_json" '
+              .iam_resources.value.compartments as $compartments |
+              [
+                $keys[] |
+                $compartments[.]? |
+                select(.) |
+                .id
+              ] |
+              unique |
+              if length >= 1 then .[]
+              else error("Expected at least one remaining TBAC project compartment")
+              end
+            ' <<< "$project_outputs"
           )
-          case "${#target_ids[@]}" in
-            0)
-              echo "Project retirement Cloud Guard Target: absent." \
-                >> "$GITHUB_STEP_SUMMARY"
-              ;;
-            1)
-              target="$(
-                oci cloud-guard target get --target-id "${target_ids[0]}"
-              )"
-              jq -e --arg project_compartment_id "$project_compartment_id" '
-                .data["target-resource-id"] == $project_compartment_id and
-                .data["target-resource-type"] == "COMPARTMENT" and
-                .data["compartment-id"] == $project_compartment_id and
-                .data["lifecycle-state"] == "ACTIVE"
-              ' <<< "$target" >/dev/null
-              oci cloud-guard target delete \
-                --target-id "${target_ids[0]}" \
-                --force \
-                --wait-for-state DELETED
-              echo "Project retirement Cloud Guard Target: removed." \
-                >> "$GITHUB_STEP_SUMMARY"
-              ;;
-            *)
-              echo "Expected at most one Cloud Guard Target for the retiring project compartment." >&2
-              exit 1
-              ;;
-          esac
+          removed_targets=0
+          for project_compartment_id in "${project_compartment_ids[@]}"; do
+            resources="$(
+              oci search resource structured-search \
+                --query-text "query all resources where compartmentId = '$project_compartment_id'" \
+                --limit 1000
+            )"
+            mapfile -t target_ids < <(
+              jq -r '
+                .data.items[]? |
+                select(.["resource-type"] == "CloudGuardTarget") |
+                .identifier
+              ' <<< "$resources"
+            )
+            case "${#target_ids[@]}" in
+              0)
+                ;;
+              1)
+                target="$(
+                  oci cloud-guard target get --target-id "${target_ids[0]}"
+                )"
+                jq -e --arg project_compartment_id "$project_compartment_id" '
+                  .data["target-resource-id"] == $project_compartment_id and
+                  .data["target-resource-type"] == "COMPARTMENT" and
+                  .data["compartment-id"] == $project_compartment_id and
+                  .data["lifecycle-state"] == "ACTIVE"
+                ' <<< "$target" >/dev/null
+                oci cloud-guard target delete \
+                  --target-id "${target_ids[0]}" \
+                  --force \
+                  --wait-for-state DELETED
+                removed_targets=$((removed_targets + 1))
+                ;;
+              *)
+                echo "Expected at most one Cloud Guard Target for each retiring TBAC project compartment." >&2
+                exit 1
+                ;;
+            esac
+          done
+          printf 'Project retirement Cloud Guard Target(s) removed: %s.\n' \
+            "$removed_targets" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Apply the same OP04 plan after merge
         if: >-
