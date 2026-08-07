@@ -9,7 +9,7 @@ Use this page to find the configuration and success condition for each phase.
 | OP01 | `op01_manage_landing_zone_environment/` | Shared compartments, network, governance, and security match the plan |
 | OP02 | `op02_manage_environment/{environment}/` | Environment resources exist and `project-onboarding-environment.json` is validated |
 | OP03 | `op03_manage_platform_gitops/` | Required platform IAM, network, and compute exist |
-| OP04 | `op04_manage_project/{environment}/{project}/` | Official OE project compartments, TBAC groups, Security Zone exception, and both handoff files exist |
+| OP04 | `op04_manage_project/{environment}/{project}/` | Official OE project compartments, TBAC groups, and both handoff files exist |
 
 OP03 is optional only when the platform is hosted elsewhere. When it is hosted
 in this tenancy, complete its `infrastructure` and `identity` stages before the
@@ -25,22 +25,14 @@ restore a child-specific network zone unless the upstream template has been
 fixed or every dependent platform resource is placed under that same zone.
 
 OP04 creates each delegated project compartment under the environment's
-`PROJECTS` compartment. Its generated
-`project-security-zone-exception.json` is protected, reviewable OP04 intent
-(schema version 2) that identifies the project child and inherited environment
-Security Zone. After a merged OP04 apply, the workflow removes the project root
-and its direct Application, Database, and Infrastructure children from inherited
-Security Zone enforcement, then polls until OCI confirms every update.
-The foundation and environment Security Zones remain enforced, and OCI retains
-a standard Cloud Guard target for each removed delegated project compartment.
-This preserves the governed project pull-request lifecycle for approved project
-NSGs, including deletion. Project Teams must not remove Security Zones manually
-or receive Security Zone permissions.
+`PROJECTS` compartment. The project and shared project network retain the same
+inherited Security Zone boundary. Project Teams do not remove Security Zones
+manually or receive Security Zone permissions.
 
 OP02 creates the fixed MVP runner policies once per environment. They cover
 the `PROJECTS` subtree, shared `NETWORK`, and shared `SECURITY` for Compute,
 ADB, and project NSGs. OP04 does not create a runner policy; it only creates
-the official TBAC project structure and the protected Security Zone exception.
+the official TBAC project structure.
 Keep these generated scopes unchanged when onboarding or retiring a project.
 
 The Hub management security list must allow SSH only from the platform

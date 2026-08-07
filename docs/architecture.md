@@ -59,17 +59,10 @@ and platform resources therefore inherit the same CIS Level 1 zone from
 `CMP-LANDINGZONE-KEY`; the environment-level zone remains unchanged.
 
 The delegated project compartment is a different MCCP ownership boundary. OP04
-creates it below the environment's `PROJECTS` compartment. Its generated,
-reviewable `project-security-zone-exception.json` declaration identifies the
-child and inherited environment zone for the protected post-apply workflow to
-reconcile. It removes the project root and its direct Application, Database, and
-Infrastructure children from inherited Security Zone enforcement. The foundation,
-environment, shared network, and platform zones
-remain enforced. OCI retains a standard Cloud Guard target for each removed
-delegated project compartment, while the Project Team's governed pull-request
-workflow can manage the approved project NSG lifecycle, including deletion.
-This is an explicit MCCP adapter behavior; the reviewed OE `master` revision does not model the
-project exception.
+creates it below the environment's `PROJECTS` compartment, where it and the
+shared project network retain the same inherited Security Zone boundary. This
+keeps the project aligned with the reviewed OE topology and avoids custom
+per-project Security Zone or Cloud Guard operations.
 
 The reviewed OE `master` revision derives an example Bastion SSH source by adding host offset `123`
 to the Hub management subnet. OCI Bastion assigns its private endpoint

@@ -530,19 +530,6 @@ local render(customer) =
         },
     };
 
-  // This is protected OP04 operational intent, not an OE input. A delegated
-  // project is removed from the inherited environment Security Zone after
-  // OP04 applies, so the project GitOps contract can manage its NSGs.
-  local project_security_zone_exception(environment, project) = {
-    // Version 2 requires condition-based confirmation of OCI's asynchronous
-    // inherited-compartment update before OP04 reports success.
-    schema_version: 2,
-    project_compartment_key: n.key_global('CMP', [environment, project]),
-    environment_compartment_key: n.key_global('CMP', [environment]),
-    environment_security_zone_display_name:
-      n.display_global('sz-tgt', [environment, 'environment']),
-  };
-
   local base_outputs = {
     'op00_manage_global_landing_zone/generated/iam.json': op00_iam,
     'op01_manage_landing_zone_environment/generated/iam.json': op01_iam,
@@ -588,11 +575,6 @@ local render(customer) =
               [environment, environment, project]
             ]:
               project_identity(environment, project),
-            [
-              'op04_manage_project/%s/%s-%s/generated/project-security-zone-exception.json' %
-              [environment, environment, project]
-            ]:
-              project_security_zone_exception(environment, project),
           },
         project_names(environment),
         outputs,
