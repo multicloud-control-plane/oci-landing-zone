@@ -316,9 +316,10 @@ unchanged. Review the OP01 final plan to confirm that no parent or environment
 Security Zone is removed.
 
 OP04 has a separate, explicit delegated project compartment boundary. After an
-approved OP04 apply creates the project child, the protected workflow removes
-only that child from inherited environment Security Zone enforcement and verifies
-the result. The parent and environment Security Zones remain enforced. OCI keeps
+approved OP04 apply creates the project hierarchy, the protected workflow removes
+the project root and its direct Application, Database, and Infrastructure children
+from inherited environment Security Zone enforcement and verifies the result. The
+parent and environment Security Zones remain enforced. OCI keeps
 a standard Cloud Guard target for the removed delegated project compartment, so
 monitoring continues while the governed project pull-request workflow can
 create, update, and delete approved project NSGs. Do not perform this action

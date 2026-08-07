@@ -621,6 +621,20 @@ jobs:
             --arg key "$project_compartment_key" \
             '.compartments[$key].id' \
             <<< "$project_output")"
+          project_compartment_ids_json="$(jq -cer \
+            --arg root_id "$project_compartment_id" '
+              [
+                .compartments[] |
+                select(.id == $root_id or .compartment_id == $root_id) | .id
+              ] |
+              unique |
+              if length >= 1 then .
+              else error("Expected the project root compartment")
+              end
+            ' <<< "$project_output")"
+          mapfile -t project_compartment_ids < <(
+            jq -r '.[]' <<< "$project_compartment_ids_json"
+          )
           environment_compartment_id="$(jq -er \
             --arg key "$environment_key" \
             '.compartments[$key].id' \
@@ -648,25 +662,26 @@ jobs:
               else error("Expected exactly one active environment Security Zone")
               end
             ' <<< "$zones")"
-          zone="$(
-            oci cloud-guard security-zone get --security-zone-id "$zone_id"
-          )"
-          if jq -e --arg id "$project_compartment_id" \
-            '.data["inherited-by-compartments"] | index($id) != null' \
-            <<< "$zone" >/dev/null; then
-            oci cloud-guard security-zone remove \
-              --security-zone-id "$zone_id" \
-              --compartment-id "$project_compartment_id"
-            result="applied"
-          else
-            result="already present"
-          fi
+          result="already present"
+          for project_compartment_id in "${project_compartment_ids[@]}"; do
+            zone="$(
+              oci cloud-guard security-zone get --security-zone-id "$zone_id"
+            )"
+            if jq -e --arg id "$project_compartment_id" \
+              '.data["inherited-by-compartments"] | index($id) != null' \
+              <<< "$zone" >/dev/null; then
+              oci cloud-guard security-zone remove \
+                --security-zone-id "$zone_id" \
+                --compartment-id "$project_compartment_id"
+              result="applied"
+            fi
+          done
           for attempt in {1..24}; do
             verified_zone="$(
               oci cloud-guard security-zone get --security-zone-id "$zone_id"
             )"
-            if ! jq -e --arg id "$project_compartment_id" \
-              '.data["inherited-by-compartments"] | index($id) != null' \
+            if jq -e --argjson ids "$project_compartment_ids_json" \
+              'any(.data["inherited-by-compartments"][]?; . as $id | $ids | index($id) != null) | not' \
               <<< "$verified_zone" >/dev/null; then
               printf 'Project Security Zone exception: %s.\n' "$result" \
                 >> "$GITHUB_STEP_SUMMARY"
