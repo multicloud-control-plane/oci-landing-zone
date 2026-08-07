@@ -663,17 +663,30 @@ jobs:
             ' <<< "$zones")"
           result="already present"
           for project_compartment_id in "${project_compartment_ids[@]}"; do
-            zone="$(
-              oci cloud-guard security-zone get --security-zone-id "$zone_id"
-            )"
-            if jq -e --arg id "$project_compartment_id" \
-              '.data["inherited-by-compartments"] | index($id) != null' \
-              <<< "$zone" >/dev/null; then
-              oci cloud-guard security-zone remove \
+            for attempt in {1..24}; do
+              zone="$(
+                oci cloud-guard security-zone get --security-zone-id "$zone_id"
+              )"
+              if ! jq -e --arg id "$project_compartment_id" \
+                '.data["inherited-by-compartments"] | index($id) != null' \
+                <<< "$zone" >/dev/null; then
+                break
+              fi
+              if remove_output="$(oci cloud-guard security-zone remove \
                 --security-zone-id "$zone_id" \
-                --compartment-id "$project_compartment_id"
-              result="applied"
-            fi
+                --compartment-id "$project_compartment_id" 2>&1)"; then
+                result="applied"
+                break
+              fi
+              if ! rg -Fq 'Security Zone not in ACTIVE state' \
+                <<< "$remove_output"; then
+                printf '%s\n' "$remove_output" >&2
+                exit 1
+              fi
+              if [ "$attempt" -lt 24 ]; then
+                sleep 5
+              fi
+            done
           done
           for attempt in {1..24}; do
             verified_zone="$(
