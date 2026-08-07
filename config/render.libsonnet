@@ -34,6 +34,7 @@ local retired_osms_statement =
   'allow service osms to read instances in tenancy';
 local bastion_rule_description =
   'EXAMPLE: Allow inbound traffic from the Bastion Service private endpoint IP address';
+local legacy_lz_role_tag = 'tagns-lz-role.tag-lz-role';
 
 local selected_policies(policies, keys) =
   policies {
@@ -58,6 +59,28 @@ local selected_groups(groups, keys) =
       for key in keys
     },
   };
+
+// The official One-OE blueprint retains landing-zone administrator tags for
+// its full one-stack IAM model. This MVP projects neither the corresponding
+// policies nor tag namespace, so omit that orphaned tag from OP02 children.
+local without_legacy_lz_role_tag(compartment) =
+  local defined_tags =
+    if std.objectHas(compartment, 'defined_tags')
+    then compartment.defined_tags
+    else {};
+  local retained_defined_tags = {
+    [key]: defined_tags[key]
+    for key in std.objectFields(defined_tags)
+    if key != legacy_lz_role_tag
+  };
+  {
+    [field]: compartment[field]
+    for field in std.objectFields(compartment)
+    if field != 'defined_tags'
+  } + (
+    if std.length(std.objectFields(retained_defined_tags)) == 0 then {}
+    else { defined_tags: retained_defined_tags }
+  );
 
 local with_notification_recipient(document, notification_email) =
   if !std.objectHas(document, 'notifications_configuration') then document
@@ -378,8 +401,18 @@ local render(customer) =
       },
     };
     local environment_compartment = landing_zone.children[environment_key];
+    local environment_without_legacy_lz_role_tags =
+      environment_compartment {
+        children: {
+          [key]:
+            without_legacy_lz_role_tag(
+              environment_compartment.children[key],
+            )
+          for key in std.objectFields(environment_compartment.children)
+        },
+      };
     local original_project_container =
-      environment_compartment.children[project_container_key];
+      environment_without_legacy_lz_role_tags.children[project_container_key];
     local project_container = {
       [field]: original_project_container[field]
       for field in std.objectFields(original_project_container)
@@ -390,7 +423,7 @@ local render(customer) =
         enable_delete: iam.compartments_configuration.enable_delete,
         compartments: {
           [environment_key]:
-            environment_compartment {
+            environment_without_legacy_lz_role_tags {
               parent_id: landing_zone_key,
               children+: {
                 [project_container_key]: project_container,
