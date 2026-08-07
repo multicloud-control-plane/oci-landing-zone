@@ -63,8 +63,9 @@ Dedicated Region Cloud@Customer, government, and other non-`oc1` identifiers.
 - Do not run local applies after the permanent GitOps flow is active.
 
 The configuration pins the reviewed OCI Landing Zone Operating Entities
-`master` revision, Orchestrator `v2.1.3`, and its OCI database module
-dependency to immutable revisions. Workflows install Terraform `1.15.8`. The
+`master` revision and Orchestrator `release-2.1.4` to immutable revisions.
+That official Orchestrator release resolves its OCI database module dependency;
+this reference does not add a separate database-module pin. Workflows install Terraform `1.15.8`. The
 official TBAC add-on creates a project root with Application, Database, and
 Infrastructure child compartments; schema-3 handoffs provide their distinct
 workload OCIDs.

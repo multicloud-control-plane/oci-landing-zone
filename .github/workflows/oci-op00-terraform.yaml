@@ -17,7 +17,7 @@ permissions:
   contents: read
 
 env:
-  ORCHESTRATOR_REVISION: 34202e837e9df015ddaaa4fce0ab62bb6e3883de
+  ORCHESTRATOR_REVISION: fcf1d7f02c0b4faa1ff55f1776c396452dd51761
   STATE_KEY: op00_manage_global_landing_zone/terraform.tfstate
 
 jobs:
