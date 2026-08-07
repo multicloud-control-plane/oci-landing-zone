@@ -1,7 +1,6 @@
 {
   "dev": [
-    "project1-demo",
-    "project1-demo2"
+    "project1-demo"
   ],
   "prod": [],
   "test": [],
