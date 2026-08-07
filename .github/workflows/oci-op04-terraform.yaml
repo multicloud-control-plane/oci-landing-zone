@@ -254,8 +254,7 @@ jobs:
               "identity_domain_groups_configuration"
             ]
           ' "$iam_input" >/dev/null
-          if rg -n '__[A-Za-z0-9_]+__' \
-            "$iam_input" "$exception_input"; then
+          if rg -n '__[A-Za-z0-9_]+__' "$iam_input"; then
             echo "Unresolved OP04 placeholder." >&2
             exit 1
           fi
