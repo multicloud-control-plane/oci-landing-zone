@@ -429,6 +429,7 @@ jobs:
           path: ${{ github.workspace }}/project-template
           token: ${{ steps.project-bootstrap-token.outputs.token }}
           persist-credentials: false
+          fetch-depth: 0
 
       - name: Initialize the project repository from the pinned template
         if: steps.project-repository.outputs.result == 'true'
