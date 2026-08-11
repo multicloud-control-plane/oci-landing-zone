@@ -426,7 +426,7 @@ jobs:
         with:
           repository: ${{ github.repository_owner }}/nonprod-project-template
           ref: 71764d988f98b77ed41943a28d417ed097057e13
-          path: ${{ runner.temp }}/project-template
+          path: ${{ github.workspace }}/project-template
           token: ${{ steps.project-bootstrap-token.outputs.token }}
           persist-credentials: false
 
@@ -438,7 +438,7 @@ jobs:
           PROJECT_REPOSITORY: ${{ steps.project-repository.outputs.repository }}
         run: |
           set -euo pipefail
-          template="$RUNNER_TEMP/project-template"
+          template="$GITHUB_WORKSPACE/project-template"
           git -C "$template" remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY_OWNER}/${PROJECT_REPOSITORY}.git"
           git -C "$template" push origin HEAD:refs/heads/main
 
