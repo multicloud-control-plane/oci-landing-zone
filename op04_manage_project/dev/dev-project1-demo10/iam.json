@@ -1,5 +1,5 @@
 {
-   "compartments_configuration": {
+    "compartments_configuration": {
       "compartments": {
          "CMP-LZ-DEV-PROJECT1-DEMO10-KEY": {
             "children": {
