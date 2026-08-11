@@ -107,11 +107,6 @@
             "compartment_id": "CMP-LANDINGZONE-KEY",
             "name": "sz-tgt-lz-cis-l1",
             "recipe_key": "SZ-RCP-LZ-01-CIS-L1-KEY"
-         },
-         "SZ-TGT-LZ-DEV-ENVIRONMENT-KEY": {
-            "compartment_id": "CMP-LZ-DEV-KEY",
-            "name": "sz-tgt-lz-dev-environment",
-            "recipe_key": "SZ-RCP-LZ-03-DEV-ENVIRONMENT-KEY"
          }
       },
       "tenancy_ocid": "TENANCY-ROOT"
