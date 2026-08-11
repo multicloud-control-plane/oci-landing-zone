@@ -317,18 +317,16 @@ The protected workflow regenerates changed phases from the reviewed OE `master`
 revision and rejects
 drift.
 
-The protected adapter also omits the reviewed OE `master` revision's child-specific shared-network
-Security Zone target. This is a narrow workaround for the upstream template:
-OCI rejects a platform Compute instance in the parent CIS zone when its subnet
-is in the child zone. The shared network and platform hierarchies therefore
-inherit the same parent CIS Level 1 zone, while environment zones remain
-unchanged. Review the OP01 final plan to confirm that no parent or environment
-Security Zone is removed.
+For the MVP, the protected adapter keeps only the reviewed OE `master` root CIS
+Level 1 Security Zone target. It deliberately omits the shared-network and
+environment child targets because they prohibit NSG deletion and make project
+workload lifecycle and project retirement fail. Review the OP01 final plan to
+confirm that only those child Security Zone targets are removed.
 
 OP04 creates the official TBAC project hierarchy below the environment's
-`PROJECTS` compartment. Project workloads and the shared project network retain
-the same inherited Security Zone boundary; the workflow does not add per-project
-Security Zone or Cloud Guard operations.
+`PROJECTS` compartment. The workflow does not add per-project Security Zone or
+Cloud Guard operations. A stronger project Security Zone model is a later
+feature and must first certify NSG create, update, and delete operations.
 
 ## 4. Configure GitHub and run readiness
 

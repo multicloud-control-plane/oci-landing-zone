@@ -488,28 +488,6 @@ local render(customer) =
       },
     };
 
-  // The reviewed OE master revision creates a child-specific zone for the shared network
-  // compartment. That separates its subnets from platform resources, which
-  // inherit the parent CIS zone, and OCI rejects those cross-zone
-  // associations. Until the upstream generator uses one zone at the common
-  // parent, retain the parent CIS zone and omit only the conflicting child
-  // target.
-  local without_shared_network_security_zone(document) =
-    local shared_network_zone_key =
-      n.key_global('SZ-TGT', ['SHARED', 'NETWORK']);
-    document {
-      security_zones_configuration+: {
-        security_zones: {
-          [key]: document.security_zones_configuration.security_zones[key]
-          for key in
-            std.objectFields(
-              document.security_zones_configuration.security_zones,
-            )
-          if key != shared_network_zone_key
-        },
-      },
-    };
-
   local project_identity(environment, project) =
     local project_container_key =
       n.key_global('CMP', [environment, 'PROJECTS']);
@@ -546,7 +524,7 @@ local render(customer) =
     'op01_manage_landing_zone_environment/generated/security_cis1_pre.json':
       active_render.security_cis1_pre,
     'op01_manage_landing_zone_environment/generated/security_cis1.json':
-      without_shared_network_security_zone(active_render.security_cis1),
+      active_render.security_cis1_pre,
   };
   local environment_outputs = std.foldl(
     function(outputs, environment)
