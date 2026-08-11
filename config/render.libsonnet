@@ -513,7 +513,9 @@ local render(customer) =
     'op01_manage_landing_zone_environment/generated/iam.json': op01_iam,
     'op01_manage_landing_zone_environment/generated/governance.json':
       full.governance {
-        tags_configuration+: tbac.governance.tags_configuration,
+        tags_configuration+: {
+          namespaces+: tbac.governance.tags_configuration.namespaces,
+        },
       },
     'op01_manage_landing_zone_environment/generated/network.json':
       op01_network,
