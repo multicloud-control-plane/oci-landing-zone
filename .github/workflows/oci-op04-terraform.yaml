@@ -363,3 +363,48 @@ jobs:
     uses: ./.github/workflows/oci-project-handoff.yaml
     with:
       project: ${{ needs.project.outputs.target_project }}
+
+  project-repository:
+    name: Create development project repository
+    needs: [project, handoff]
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.project.outputs.operation == 'onboarding' &&
+      startsWith(needs.project.outputs.target_project, 'dev-')
+    runs-on: ${{ fromJSON(vars.FOUNDATION_RUNNER_LABELS || '["self-hosted"]') }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the merged foundation revision
+        uses: actions/checkout@v7.0.1
+
+      - name: Download the validated project handoff
+        uses: actions/download-artifact@v5
+        with:
+          name: project-foundation-handoff-${{ needs.project.outputs.target_project }}
+          path: ${{ runner.temp }}/project-handoff
+
+      - name: Create a GitHub App installation token
+        id: project-bootstrap-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.PROJECT_BOOTSTRAP_APP_ID }}
+          private-key: ${{ secrets.PROJECT_BOOTSTRAP_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Create the project repository and publish the handoff
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.project-bootstrap-token.outputs.token }}
+          PROJECT: ${{ needs.project.outputs.target_project }}
+        run: |
+          set -euo pipefail
+          handoff="$RUNNER_TEMP/project-handoff/environment_information.md"
+          test -f "$handoff"
+          python3 scripts/bootstrap_project_repository.py \
+            --organization "$GITHUB_REPOSITORY_OWNER" \
+            --template-repository nonprod-project-template \
+            --project "$PROJECT" \
+            --handoff-markdown "$handoff"
