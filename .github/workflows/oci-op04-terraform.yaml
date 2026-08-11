@@ -392,33 +392,67 @@ jobs:
           owner: ${{ github.repository_owner }}
 
       - name: Create the project repository and publish the handoff
+        id: project-repository
         uses: actions/github-script@v9
         env:
           PROJECT: ${{ needs.project.outputs.target_project }}
-          HANDOFF_PATH: ${{ runner.temp }}/project-handoff/environment_information.md
         with:
           github-token: ${{ steps.project-bootstrap-token.outputs.token }}
+          result-encoding: string
           script: |
-            const fs = require("fs")
             const match = /^dev-([a-z][a-z0-9]*(?:-[a-z0-9]+)*)$/.exec(process.env.PROJECT)
             if (!match) throw new Error("Only one dev project may be bootstrapped.")
 
             const owner = context.repo.owner
             const repo = `nonprod-${match[1]}`
+            core.setOutput("repository", repo)
             try {
               const { data } = await github.rest.repos.get({ owner, repo })
               if (!data.private) throw new Error("The existing project repository must be private.")
+              return "false"
             } catch (error) {
               if (error.status !== 404) throw error
-              await github.rest.repos.createUsingTemplate({
-                template_owner: owner,
-                template_repo: "nonprod-project-template",
-                owner,
+              await github.rest.repos.createInOrg({
+                org: owner,
                 name: repo,
                 private: true,
               })
+              return "true"
             }
 
+      - name: Check out the pinned project template
+        if: steps.project-repository.outputs.result == 'true'
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: ${{ github.repository_owner }}/nonprod-project-template
+          ref: 71764d988f98b77ed41943a28d417ed097057e13
+          path: ${{ runner.temp }}/project-template
+          token: ${{ steps.project-bootstrap-token.outputs.token }}
+          persist-credentials: false
+
+      - name: Initialize the project repository from the pinned template
+        if: steps.project-repository.outputs.result == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.project-bootstrap-token.outputs.token }}
+          PROJECT_REPOSITORY: ${{ steps.project-repository.outputs.repository }}
+        run: |
+          set -euo pipefail
+          template="$RUNNER_TEMP/project-template"
+          git -C "$template" remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY_OWNER}/${PROJECT_REPOSITORY}.git"
+          git -C "$template" push origin HEAD:refs/heads/main
+
+      - name: Publish the development handoff
+        uses: actions/github-script@v9
+        env:
+          HANDOFF_PATH: ${{ runner.temp }}/project-handoff/environment_information.md
+          PROJECT_REPOSITORY: ${{ steps.project-repository.outputs.repository }}
+        with:
+          github-token: ${{ steps.project-bootstrap-token.outputs.token }}
+          script: |
+            const fs = require("fs")
+            const owner = context.repo.owner
+            const repo = process.env.PROJECT_REPOSITORY
             const path = "environments/dev/environment_information.md"
             const { data } = await github.rest.repos.getContent({ owner, repo, path })
             if (Array.isArray(data) || !data.sha) throw new Error("The template handoff file cannot be verified.")
