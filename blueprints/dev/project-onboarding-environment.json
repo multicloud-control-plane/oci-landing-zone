@@ -54,9 +54,9 @@
   "region": "eu-frankfurt-1",
   "schema_version": 2,
   "source": {
-    "commit_sha": "b91a03bad9e1ca688d0e1e0f07e240149f0d5c8c",
+    "commit_sha": "7871d63c2641b5ef30a4e93756e8a4f54a197470",
     "repository": "multicloud-control-plane/oci-landing-zone",
-    "run_id": "30006088768",
+    "run_id": "31150365393",
     "workflow": "oci-op02-terraform.yaml"
   },
   "tenancy_ocid": "ocid1.tenancy.oc1..aaaaaaaacgomiinzmfduoro47jiq5byg2urp7rk7wgxs74gfqczvj6yau3sq"
