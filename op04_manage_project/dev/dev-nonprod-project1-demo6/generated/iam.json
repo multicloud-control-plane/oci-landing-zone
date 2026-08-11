@@ -1,35 +1,35 @@
 {
    "compartments_configuration": {
       "compartments": {
-         "CMP-LZ-DEV-NONPROD-PROJECT1-DEMO5-KEY": {
+         "CMP-LZ-DEV-NONPROD-PROJECT1-DEMO6-KEY": {
             "children": {
-               "CMP-LZ-DEV-NONPROD-PROJECT1-DEMO5-APP-KEY": {
+               "CMP-LZ-DEV-NONPROD-PROJECT1-DEMO6-APP-KEY": {
                   "defined_tags": {
-                     "tn-lzp-proj-role.app-admin": "grp-lz-dev-nonprod-project1-demo5-app-admins"
+                     "tn-lzp-proj-role.app-admin": "grp-lz-dev-nonprod-project1-demo6-app-admins"
                   },
                   "description": "OCI Landing Zone TBAC project app compartment.",
-                  "name": "cmp-lz-dev-nonprod-project1-demo5-app"
+                  "name": "cmp-lz-dev-nonprod-project1-demo6-app"
                },
-               "CMP-LZ-DEV-NONPROD-PROJECT1-DEMO5-DB-KEY": {
+               "CMP-LZ-DEV-NONPROD-PROJECT1-DEMO6-DB-KEY": {
                   "defined_tags": {
-                     "tn-lzp-proj-role.db-admin": "grp-lz-dev-nonprod-project1-demo5-db-admins"
+                     "tn-lzp-proj-role.db-admin": "grp-lz-dev-nonprod-project1-demo6-db-admins"
                   },
                   "description": "OCI Landing Zone TBAC project database compartment.",
-                  "name": "cmp-lz-dev-nonprod-project1-demo5-db"
+                  "name": "cmp-lz-dev-nonprod-project1-demo6-db"
                },
-               "CMP-LZ-DEV-NONPROD-PROJECT1-DEMO5-INFRA-KEY": {
+               "CMP-LZ-DEV-NONPROD-PROJECT1-DEMO6-INFRA-KEY": {
                   "defined_tags": {
-                     "tn-lzp-proj-role.infra-admin": "grp-lz-dev-nonprod-project1-demo5-infra-admins"
+                     "tn-lzp-proj-role.infra-admin": "grp-lz-dev-nonprod-project1-demo6-infra-admins"
                   },
                   "description": "OCI Landing Zone TBAC project infrastructure compartment.",
-                  "name": "cmp-lz-dev-nonprod-project1-demo5-infra"
+                  "name": "cmp-lz-dev-nonprod-project1-demo6-infra"
                }
             },
             "defined_tags": {
-               "tn-lzp-proj-role.proj-admin": "grp-lz-dev-nonprod-project1-demo5-admins"
+               "tn-lzp-proj-role.proj-admin": "grp-lz-dev-nonprod-project1-demo6-admins"
             },
             "description": "OCI Landing Zone TBAC project root compartment.",
-            "name": "cmp-lz-dev-nonprod-project1-demo5"
+            "name": "cmp-lz-dev-nonprod-project1-demo6"
          }
       },
       "default_parent_id": "CMP-LZ-DEV-PROJECTS-KEY",
@@ -38,36 +38,36 @@
    "identity_domain_groups_configuration": {
       "default_identity_domain_id": "COMMON-DOMAIN",
       "groups": {
-         "GRP-LZ-DEV-NONPROD-PROJECT1-DEMO5-ADMINS-KEY": {
+         "GRP-LZ-DEV-NONPROD-PROJECT1-DEMO6-ADMINS-KEY": {
             "defined_tags": {
-               "tn-lzp-proj-role.proj-admin": "grp-lz-dev-nonprod-project1-demo5-admins"
+               "tn-lzp-proj-role.proj-admin": "grp-lz-dev-nonprod-project1-demo6-admins"
             },
             "description": "OCI Landing Zone TBAC project administrators.",
-            "name": "grp-lz-dev-nonprod-project1-demo5-admins"
+            "name": "grp-lz-dev-nonprod-project1-demo6-admins"
          },
-         "GRP-LZ-DEV-NONPROD-PROJECT1-DEMO5-APP-ADMINS-KEY": {
+         "GRP-LZ-DEV-NONPROD-PROJECT1-DEMO6-APP-ADMINS-KEY": {
             "defined_tags": {
-               "tn-lzp-proj-role.app-admin": "grp-lz-dev-nonprod-project1-demo5-app-admins",
-               "tn-lzp-proj-role.proj-admin": "grp-lz-dev-nonprod-project1-demo5-admins"
+               "tn-lzp-proj-role.app-admin": "grp-lz-dev-nonprod-project1-demo6-app-admins",
+               "tn-lzp-proj-role.proj-admin": "grp-lz-dev-nonprod-project1-demo6-admins"
             },
             "description": "OCI Landing Zone TBAC project app administrators.",
-            "name": "grp-lz-dev-nonprod-project1-demo5-app-admins"
+            "name": "grp-lz-dev-nonprod-project1-demo6-app-admins"
          },
-         "GRP-LZ-DEV-NONPROD-PROJECT1-DEMO5-DB-ADMINS-KEY": {
+         "GRP-LZ-DEV-NONPROD-PROJECT1-DEMO6-DB-ADMINS-KEY": {
             "defined_tags": {
-               "tn-lzp-proj-role.db-admin": "grp-lz-dev-nonprod-project1-demo5-db-admins",
-               "tn-lzp-proj-role.proj-admin": "grp-lz-dev-nonprod-project1-demo5-admins"
+               "tn-lzp-proj-role.db-admin": "grp-lz-dev-nonprod-project1-demo6-db-admins",
+               "tn-lzp-proj-role.proj-admin": "grp-lz-dev-nonprod-project1-demo6-admins"
             },
             "description": "OCI Landing Zone TBAC project database administrators.",
-            "name": "grp-lz-dev-nonprod-project1-demo5-db-admins"
+            "name": "grp-lz-dev-nonprod-project1-demo6-db-admins"
          },
-         "GRP-LZ-DEV-NONPROD-PROJECT1-DEMO5-INFRA-ADMINS-KEY": {
+         "GRP-LZ-DEV-NONPROD-PROJECT1-DEMO6-INFRA-ADMINS-KEY": {
             "defined_tags": {
-               "tn-lzp-proj-role.infra-admin": "grp-lz-dev-nonprod-project1-demo5-infra-admins",
-               "tn-lzp-proj-role.proj-admin": "grp-lz-dev-nonprod-project1-demo5-admins"
+               "tn-lzp-proj-role.infra-admin": "grp-lz-dev-nonprod-project1-demo6-infra-admins",
+               "tn-lzp-proj-role.proj-admin": "grp-lz-dev-nonprod-project1-demo6-admins"
             },
             "description": "OCI Landing Zone TBAC project infrastructure administrators.",
-            "name": "grp-lz-dev-nonprod-project1-demo5-infra-admins"
+            "name": "grp-lz-dev-nonprod-project1-demo6-infra-admins"
          }
       },
       "ignore_external_membership_updates": true
