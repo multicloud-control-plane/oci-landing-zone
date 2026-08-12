@@ -262,7 +262,22 @@ jobs:
             backend "oci" {}
           }
           EOF
-            terraform -chdir="$state_directory" init \
+            terraform_init_with_retry() {
+              local attempt
+              for attempt in 1 2 3 4 5; do
+                if terraform "$@"; then
+                  return 0
+                fi
+                if [ "$attempt" -eq 5 ]; then
+                  echo "Terraform init failed after $attempt attempts." >&2
+                  return 1
+                fi
+                delay_seconds=$((attempt * 10))
+                echo "Terraform init failed; retrying in ${delay_seconds}s..." >&2
+                sleep "$delay_seconds"
+              done
+            }
+            terraform_init_with_retry -chdir="$state_directory" init \
               -input=false -no-color \
               -backend-config="bucket=$STATE_BUCKET" \
               -backend-config="namespace=$STATE_NAMESPACE" \
