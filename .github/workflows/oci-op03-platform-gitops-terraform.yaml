@@ -290,8 +290,23 @@ jobs:
           PROJECT_STATE_BUCKET: ${{ vars.PROJECT_STATE_BUCKET }}
         run: |
           set -euo pipefail
-          terraform -chdir="$GITHUB_WORKSPACE/ORCH" init \
-            -input=false -no-color
+          initialize_terraform() {
+            local attempt
+            for attempt in 1 2 3 4 5; do
+              if terraform -chdir="$GITHUB_WORKSPACE/ORCH" init \
+                -input=false -no-color; then
+                return 0
+              fi
+              if [ "$attempt" -eq 5 ]; then
+                echo "Terraform init failed after $attempt attempts." >&2
+                return 1
+              fi
+              delay_seconds=$((attempt * 10))
+              echo "Terraform init failed; retrying in ${delay_seconds}s..." >&2
+              sleep "$delay_seconds"
+            done
+          }
+          initialize_terraform
           terraform -chdir="$GITHUB_WORKSPACE/ORCH" validate -no-color
           arguments=(
             "-var-file=$RUNNER_TEMP/oci-credentials.tfvars.json"
