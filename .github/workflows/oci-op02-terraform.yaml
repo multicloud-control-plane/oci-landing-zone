@@ -17,7 +17,7 @@ permissions:
   contents: read
 
 env:
-  ORCHESTRATOR_REVISION: fcf1d7f02c0b4faa1ff55f1776c396452dd51761
+  ORCHESTRATOR_REF: release-2.1.4
 
 jobs:
   op02:
@@ -109,10 +109,11 @@ jobs:
           git -C "$GITHUB_WORKSPACE/ORCH" remote add origin \
             https://github.com/oci-landing-zones/terraform-oci-modules-orchestrator.git
           git -C "$GITHUB_WORKSPACE/ORCH" fetch --quiet --depth 1 \
-            origin "$ORCHESTRATOR_REVISION"
+            origin "$ORCHESTRATOR_REF"
           git -C "$GITHUB_WORKSPACE/ORCH" checkout --quiet --detach FETCH_HEAD
-          test "$(git -C "$GITHUB_WORKSPACE/ORCH" rev-parse HEAD)" = \
-            "$ORCHESTRATOR_REVISION"
+          resolved_ref="$(git -C "$GITHUB_WORKSPACE/ORCH" rev-parse HEAD)"
+          printf 'Resolved Orchestrator %s to %s\\n' \
+            "$ORCHESTRATOR_REF" "$resolved_ref"
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v4.0.1
