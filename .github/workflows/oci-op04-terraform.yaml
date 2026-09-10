@@ -474,6 +474,7 @@ jobs:
         env:
           HANDOFF_PATH: ${{ runner.temp }}/project-handoff/environment_information.md
           PROJECT_REPOSITORY: ${{ steps.project-repository.outputs.repository }}
+          PROJECT_REPOSITORY_CREATED: ${{ steps.project-repository.outputs.result }}
         with:
           github-token: ${{ steps.project-bootstrap-token.outputs.token }}
           script: |
@@ -481,7 +482,17 @@ jobs:
             const owner = context.repo.owner
             const repo = process.env.PROJECT_REPOSITORY
             const path = "environments/dev/environment_information.md"
-            const { data } = await github.rest.repos.getContent({ owner, repo, path })
+            const attempts = process.env.PROJECT_REPOSITORY_CREATED === "true" ? 15 : 1
+            let data
+            for (let attempt = 1; attempt <= attempts; attempt += 1) {
+              try {
+                ({ data } = await github.rest.repos.getContent({ owner, repo, path }))
+                break
+              } catch (error) {
+                if (error.status !== 404 || attempt === attempts) throw error
+                await new Promise((resolve) => setTimeout(resolve, 2000))
+              }
+            }
             if (Array.isArray(data) || !data.sha) throw new Error("The template handoff file cannot be verified.")
             await github.rest.repos.createOrUpdateFileContents({
               owner,
