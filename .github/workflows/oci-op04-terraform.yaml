@@ -458,36 +458,16 @@ jobs:
               return "false"
             } catch (error) {
               if (error.status !== 404) throw error
-              await github.rest.repos.createInOrg({
-                org: owner,
+              const { data } = await github.rest.repos.createUsingTemplate({
+                template_owner: owner,
+                template_repo: "nonprod-project-template",
+                owner,
                 name: repo,
                 private: true,
               })
+              if (!data.private) throw new Error("The generated project repository must be private.")
               return "true"
             }
-
-      - name: Check out the pinned project template
-        if: steps.project-repository.outputs.result == 'true'
-        uses: actions/checkout@v7.0.1
-        with:
-          repository: ${{ github.repository_owner }}/nonprod-project-template
-          ref: 71764d988f98b77ed41943a28d417ed097057e13
-          path: ${{ github.workspace }}/project-template
-          token: ${{ steps.project-bootstrap-token.outputs.token }}
-          persist-credentials: false
-          fetch-depth: 0
-
-      - name: Initialize the project repository from the pinned template
-        if: steps.project-repository.outputs.result == 'true'
-        shell: bash
-        env:
-          GH_TOKEN: ${{ steps.project-bootstrap-token.outputs.token }}
-          PROJECT_REPOSITORY: ${{ steps.project-repository.outputs.repository }}
-        run: |
-          set -euo pipefail
-          template="$GITHUB_WORKSPACE/project-template"
-          git -C "$template" remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY_OWNER}/${PROJECT_REPOSITORY}.git"
-          git -C "$template" push origin HEAD:refs/heads/main
 
       - name: Publish the development handoff
         uses: actions/github-script@v9
