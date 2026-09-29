@@ -1,0 +1,75 @@
+{
+   "compartments_configuration": {
+      "compartments": {
+         "CMP-LZ-DEV-PROJECT95-KEY": {
+            "children": {
+               "CMP-LZ-DEV-PROJECT95-APP-KEY": {
+                  "defined_tags": {
+                     "tn-lzp-proj-role.app-admin": "grp-lz-dev-project95-app-admins"
+                  },
+                  "description": "OCI Landing Zone TBAC project app compartment.",
+                  "name": "cmp-lz-dev-project95-app"
+               },
+               "CMP-LZ-DEV-PROJECT95-DB-KEY": {
+                  "defined_tags": {
+                     "tn-lzp-proj-role.db-admin": "grp-lz-dev-project95-db-admins"
+                  },
+                  "description": "OCI Landing Zone TBAC project database compartment.",
+                  "name": "cmp-lz-dev-project95-db"
+               },
+               "CMP-LZ-DEV-PROJECT95-INFRA-KEY": {
+                  "defined_tags": {
+                     "tn-lzp-proj-role.infra-admin": "grp-lz-dev-project95-infra-admins"
+                  },
+                  "description": "OCI Landing Zone TBAC project infrastructure compartment.",
+                  "name": "cmp-lz-dev-project95-infra"
+               }
+            },
+            "defined_tags": {
+               "tn-lzp-proj-role.proj-admin": "grp-lz-dev-project95-admins"
+            },
+            "description": "OCI Landing Zone TBAC project root compartment.",
+            "name": "cmp-lz-dev-project95"
+         }
+      },
+      "default_parent_id": "CMP-LZ-DEV-PROJECTS-KEY",
+      "enable_delete": "true"
+   },
+   "identity_domain_groups_configuration": {
+      "default_identity_domain_id": "COMMON-DOMAIN",
+      "groups": {
+         "GRP-LZ-DEV-PROJECT95-ADMINS-KEY": {
+            "defined_tags": {
+               "tn-lzp-proj-role.proj-admin": "grp-lz-dev-project95-admins"
+            },
+            "description": "OCI Landing Zone TBAC project administrators.",
+            "name": "grp-lz-dev-project95-admins"
+         },
+         "GRP-LZ-DEV-PROJECT95-APP-ADMINS-KEY": {
+            "defined_tags": {
+               "tn-lzp-proj-role.app-admin": "grp-lz-dev-project95-app-admins",
+               "tn-lzp-proj-role.proj-admin": "grp-lz-dev-project95-admins"
+            },
+            "description": "OCI Landing Zone TBAC project app administrators.",
+            "name": "grp-lz-dev-project95-app-admins"
+         },
+         "GRP-LZ-DEV-PROJECT95-DB-ADMINS-KEY": {
+            "defined_tags": {
+               "tn-lzp-proj-role.db-admin": "grp-lz-dev-project95-db-admins",
+               "tn-lzp-proj-role.proj-admin": "grp-lz-dev-project95-admins"
+            },
+            "description": "OCI Landing Zone TBAC project database administrators.",
+            "name": "grp-lz-dev-project95-db-admins"
+         },
+         "GRP-LZ-DEV-PROJECT95-INFRA-ADMINS-KEY": {
+            "defined_tags": {
+               "tn-lzp-proj-role.infra-admin": "grp-lz-dev-project95-infra-admins",
+               "tn-lzp-proj-role.proj-admin": "grp-lz-dev-project95-admins"
+            },
+            "description": "OCI Landing Zone TBAC project infrastructure administrators.",
+            "name": "grp-lz-dev-project95-infra-admins"
+         }
+      },
+      "ignore_external_membership_updates": true
+   }
+}
