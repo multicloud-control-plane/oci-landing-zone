@@ -421,9 +421,72 @@ jobs:
           github.event_name == 'push' &&
           github.ref == 'refs/heads/main'
         shell: bash
+        env:
+          OPERATION: ${{ steps.target.outputs.operation }}
         run: |
+          set -euo pipefail
+          apply_log="$RUNNER_TEMP/op04-apply.log"
+          if terraform -chdir="$GITHUB_WORKSPACE/ORCH" apply \
+            -input=false -no-color -parallelism=1 -auto-approve \
+            "$RUNNER_TEMP/op04.tfplan" 2>&1 | tee "$apply_log"; then
+            exit 0
+          else
+            apply_status=("${PIPESTATUS[@]}")
+            apply_exit="${apply_status[0]}"
+            if [ "$apply_exit" -eq 0 ]; then exit "${apply_status[1]}"; fi
+          fi
+
+          # Recover only the observed new-Vault DNS race, once at onboarding.
+          dns_error='^Error: Post "https://[a-z0-9]+-management\.kms\.[a-z0-9-]+\.oraclecloud\.com/20180608/keys": dial tcp: lookup .*: no such host$'
+          if [ "$OPERATION" != "onboarding" ] ||
+            [ "$(rg -c '^Error:' "$apply_log")" != "1" ] ||
+            ! rg -q "$dns_error" "$apply_log"; then
+            exit "$apply_exit"
+          fi
+          vault_host="$(sed -nE 's@^Error: Post "https://([^/]+)/20180608/keys".*@\1@p' "$apply_log")"
+          region="$(jq -er '.region' "$RUNNER_TEMP/oci-credentials.tfvars.json")"
+          if [[ "$vault_host" != *"-management.kms.$region.oraclecloud.com" ]]; then
+            exit "$apply_exit"
+          fi
+          dns_ready=false
+          dns_deadline=$((SECONDS + 300))
+          while [ "$SECONDS" -lt "$dns_deadline" ]; do
+            remaining=$((dns_deadline - SECONDS))
+            if [ "$remaining" -le 0 ]; then break; fi
+            if timeout "$((remaining < 5 ? remaining : 5))" \
+              getent ahostsv4 "$vault_host" >/dev/null; then
+              dns_ready=true
+              break
+            fi
+            remaining=$((dns_deadline - SECONDS))
+            if [ "$remaining" -le 0 ]; then break; fi
+            echo "Waiting for new Vault DNS ($remaining seconds remaining)."
+            sleep "$((remaining < 10 ? remaining : 10))"
+          done
+          if ! $dns_ready; then
+            echo "Vault DNS is unavailable after the bounded five-minute wait." >&2
+            exit "$apply_exit"
+          fi
+
+          # The partial apply changed state: generate and guard a fresh plan.
+          terraform -chdir="$GITHUB_WORKSPACE/ORCH" plan \
+            -input=false -no-color -refresh=true \
+            -var-file="$RUNNER_TEMP/oci-credentials.tfvars.json" \
+            -var-file="$RUNNER_TEMP/op04-dependencies.tfvars.json" \
+            -var-file="$RUNNER_TEMP/op04-iam.json" \
+            -var="output_path=$RUNNER_TEMP/op04-output" \
+            -out="$RUNNER_TEMP/op04-dns-ready.tfplan"
+          terraform -chdir="$GITHUB_WORKSPACE/ORCH" show -json \
+            "$RUNNER_TEMP/op04-dns-ready.tfplan" > "$RUNNER_TEMP/op04-dns-ready.json"
+          python3 "$GITHUB_WORKSPACE/controls/scripts/validate_op04_plan.py" \
+            "$RUNNER_TEMP/op04-dns-ready.json"
+          jq -e 'all(.resource_changes[]?;
+            .mode != "managed" or (.type | startswith("oci_") | not) or
+            (.change.actions == ["create"] or .change.actions == ["no-op"])
+          )' "$RUNNER_TEMP/op04-dns-ready.json" >/dev/null
           terraform -chdir="$GITHUB_WORKSPACE/ORCH" apply \
-            -input=false -no-color -parallelism=1 -auto-approve "$RUNNER_TEMP/op04.tfplan"
+            -input=false -no-color -parallelism=1 -auto-approve \
+            "$RUNNER_TEMP/op04-dns-ready.tfplan"
 
   handoff:
     name: Generate project handoff after OP04
