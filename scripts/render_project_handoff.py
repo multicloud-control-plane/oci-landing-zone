@@ -8,6 +8,7 @@ import argparse
 import json
 import re
 from pathlib import Path
+from urllib.parse import urlparse
 
 
 PROJECT_PATTERN = re.compile(
@@ -16,8 +17,8 @@ PROJECT_PATTERN = re.compile(
 )
 REGION_PATTERN = re.compile(r"^[a-z]{2}-[a-z]+-[0-9]+$")
 OCID_PATTERN = re.compile(
-    r"^ocid1\.(?P<kind>compartment|vcn|subnet)\.oc1"
-    r"\.(?:[a-z0-9-]+)?\.[A-Za-z0-9_-]+$"
+    r"^ocid1\.(?P<kind>compartment|vcn|subnet|vault|key)\.oc1"
+    r"\.(?:[a-z0-9-]+)?\.[A-Za-z0-9_.-]+$"
 )
 
 
@@ -121,6 +122,46 @@ def build_handoff_data(project, project_config, op04_output, blueprint):
         }
         for role, child_key in child_keys.items()
     }
+    vault_key = f"VLT-LZ-{environment.upper()}-{project_name.upper()}-KEY"
+    kms_key = f"KMS-LZ-{environment.upper()}-{project_name.upper()}-KEY"
+    expected_vault_config = {
+        "default_compartment_id": child_keys["database"],
+        "vaults": {vault_key: {"name": f"vlt-lz-{project}", "type": "DEFAULT"}},
+        "keys": {kms_key: {
+            "name": f"kms-lz-{project}", "vault_key": vault_key,
+            "algorithm": "AES", "length": 32, "protection_mode": "HSM",
+        }},
+    }
+    if project_config.get("vaults_configuration") != expected_vault_config:
+        raise HandoffError("OP04 Vault declaration does not match the project DB scope")
+    security = require_mapping(op04_output.get("security_resources"), "security_resources")
+    vaults = require_mapping(security.get("vaults"), "security_resources.vaults")
+    keys = require_mapping(security.get("keys"), "security_resources.keys")
+    if set(vaults) != {vault_key} or set(keys) != {kms_key}:
+        raise HandoffError("expected exactly one project Vault and key output")
+    vault_ocid = require_ocid(vaults, vault_key, "vault", "Vault")
+    key_ocid = require_ocid(keys, kms_key, "key", "Vault key")
+    vault, key = vaults[vault_key], keys[kms_key]
+    endpoint = vault.get("management_endpoint")
+    host = urlparse(endpoint).hostname if isinstance(endpoint, str) else None
+    region = blueprint["region"]
+    # Official OC1 aliases from oracle/oci-python-sdk src/oci/regions_definitions.py.
+    # Keep identical to the independently packaged Cloud Operator validator data.
+    region_codes = load_json(Path(__file__).with_name("oci-region-codes.json"))
+    if (
+        vault.get("compartment_id") != compartments["database"]["ocid"]
+        or key.get("compartment_id") != compartments["database"]["ocid"]
+        or vault.get("vault_type") != "DEFAULT"
+        or key.get("protection_mode") != "HSM"
+        or key.get("key_shape") != [{"algorithm": "AES", "length": 32, "curve_id": None}]
+        and key.get("key_shape") != [{"algorithm": "AES", "length": 32}]
+        or not host or not host.endswith(f".kms.{region}.oraclecloud.com")
+        or not endpoint.startswith("https://")
+        or key.get("management_endpoint") != endpoint
+        or any(region_codes.get(value.split(".")[3], value.split(".")[3]) != region
+               for value in (vault_ocid, key_ocid))
+    ):
+        raise HandoffError("Vault/key outputs do not match the DB compartment, region or key binding")
     network = require_mapping(blueprint.get("network"), "blueprint network")
     vcn = require_mapping(network.get("vcn"), "blueprint VCN")
     subnets = require_mapping(network.get("subnets"), "blueprint subnets")
@@ -132,6 +173,9 @@ def build_handoff_data(project, project_config, op04_output, blueprint):
         "region": blueprint["region"],
         "project_root": {"key": parent_key, "ocid": project_ocid},
         "compartments": compartments,
+        "vault": {"key": vault_key, "ocid": vault_ocid},
+        "vault_key": {"key": kms_key, "ocid": key_ocid},
+        "secrets_compartment": compartments["database"]["ocid"],
         "vcn": vcn,
         "subnets": subnets,
     }
@@ -154,8 +198,7 @@ def render_markdown(data):
     vcn = data["vcn"]
     return f"""# Project Environment Information
 
-This credential-free document is the human-readable representation of the
-validated `project-foundation-handoff.json` artifact.
+This credential-free document is the human-readable representation of the validated `project-foundation-handoff.json` artifact.
 
 | Reference | Value |
 |---|---|
@@ -172,8 +215,17 @@ validated `project-foundation-handoff.json` artifact.
 | DB compartment | {data['compartments']['database']['key']} | {data['compartments']['database']['ocid']} |
 | Infra compartment | {data['compartments']['infrastructure']['key']} | {data['compartments']['infrastructure']['ocid']} |
 
-The application, database, and infrastructure fields in the machine handoff
-are distinct workload targets under the TBAC project root.
+The application, database, and infrastructure fields in the machine handoff are distinct workload targets under the TBAC project root.
+
+## Project secrets
+
+| Reference | Logical key | OCID |
+|---|---|---|
+| Vault | {data['vault']['key']} | {data['vault']['ocid']} |
+| Vault key | {data['vault_key']['key']} | {data['vault_key']['ocid']} |
+| Secrets compartment | {data['compartments']['database']['key']} | {data['secrets_compartment']} |
+
+The DEFAULT Vault and AES-256 HSM key are in the DB compartment in {data['region']}. Project Team creates and rotates secrets in this scope. CloudOps must complete manual Vault and key retirement before retiring the project. OP04 never deletes them automatically.
 
 ## OP02 network
 
@@ -219,11 +271,14 @@ def build_machine_handoff(
     ):
         raise HandoffError("handoff routing or provenance is invalid")
     return {
-        "schema_version": 3,
+        "schema_version": 4,
         "cloud": "oci",
         "project_slug": target_repository,
         "environment": environment,
         "region": data["region"],
+        "vault": data["vault"]["ocid"],
+        "vault_key": data["vault_key"]["ocid"],
+        "secrets_compartment": data["secrets_compartment"],
         "project_root_compartment": data["project_root"]["ocid"],
         "app_compartment": data["compartments"]["app"]["ocid"],
         "database_compartment": data["compartments"]["database"]["ocid"],
