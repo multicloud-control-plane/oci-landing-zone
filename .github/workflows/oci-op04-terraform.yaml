@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 env:
-  ORCHESTRATOR_REF: release-2.1.4
+  ORCHESTRATOR_REVISION: fcf1d7f02c0b4faa1ff55f1776c396452dd51761
 
 jobs:
   project:
@@ -118,11 +118,23 @@ jobs:
             iam_input="$GITHUB_WORKSPACE/request/$OP04_ROOT/iam.json"
             test -f "$iam_input"
           fi
-          jq -e '
+          jq -e --arg project "${OP04_ROOT##*/}" '
+            ("LZ-" + ($project | ascii_upcase)) as $token |
             keys == [
               "compartments_configuration",
-              "identity_domain_groups_configuration"
-            ]
+              "identity_domain_groups_configuration",
+              "vaults_configuration"
+            ] and .vaults_configuration == {
+              default_compartment_id: ("CMP-" + $token + "-DB-KEY"),
+              vaults: {("VLT-" + $token + "-KEY"): {
+                name: ("vlt-lz-" + $project), type: "DEFAULT"
+              }},
+              keys: {("KMS-" + $token + "-KEY"): {
+                name: ("kms-lz-" + $project),
+                vault_key: ("VLT-" + $token + "-KEY"),
+                algorithm: "AES", length: 32, protection_mode: "HSM"
+              }}
+            }
           ' "$iam_input" >/dev/null
           if rg -n '__[A-Za-z0-9_]+__' "$iam_input"; then
             echo "Unresolved OP04 placeholder." >&2
@@ -139,11 +151,10 @@ jobs:
           git -C "$GITHUB_WORKSPACE/ORCH" remote add origin \
             https://github.com/oci-landing-zones/terraform-oci-modules-orchestrator.git
           git -C "$GITHUB_WORKSPACE/ORCH" fetch --quiet --depth 1 \
-            origin "$ORCHESTRATOR_REF"
+            origin "$ORCHESTRATOR_REVISION"
           git -C "$GITHUB_WORKSPACE/ORCH" checkout --quiet --detach FETCH_HEAD
-          resolved_ref="$(git -C "$GITHUB_WORKSPACE/ORCH" rev-parse HEAD)"
-          printf 'Resolved Orchestrator %s to %s\\n' \
-            "$ORCHESTRATOR_REF" "$resolved_ref"
+          test "$(git -C "$GITHUB_WORKSPACE/ORCH" rev-parse HEAD)" = \
+            "$ORCHESTRATOR_REVISION"
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v4.0.1
@@ -191,21 +202,6 @@ jobs:
             -backend-config="region=$STATE_REGION" \
             -backend-config="auth=InstancePrincipal" \
             -backend-config="key=op00_manage_global_landing_zone/terraform.tfstate"
-          terraform_init_with_retry() {
-            local attempt
-            for attempt in 1 2 3 4 5; do
-              if terraform "$@"; then
-                return 0
-              fi
-              if [ "$attempt" -eq 5 ]; then
-                echo "Terraform init failed after $attempt attempts." >&2
-                return 1
-              fi
-              delay_seconds=$((attempt * 10))
-              echo "Terraform init failed; retrying in ${delay_seconds}s..." >&2
-              sleep "$delay_seconds"
-            done
-          }
           terraform_init_with_retry -chdir="$dependency_root/op02" init \
             -input=false -no-color \
             -backend-config="bucket=$STATE_BUCKET" \
@@ -265,6 +261,7 @@ jobs:
           STATE_REGION: ${{ vars.REGION }}
           TENANCY_OCID: ${{ vars.OCI_TENANCY_OCID }}
           STATE_KEY: ${{ steps.target.outputs.state_key }}
+          ENVIRONMENT: ${{ steps.target.outputs.environment }}
         run: |
           set -euo pipefail
           for variable in \
@@ -275,6 +272,13 @@ jobs:
               exit 1
             }
           done
+          blueprint="$(jq -er --arg environment "$ENVIRONMENT" \
+            '.environment_blueprints[$environment]' \
+            "$GITHUB_WORKSPACE/request/.github/project-onboarding-contract.json")"
+          environment_region="$(jq -er --arg environment "$ENVIRONMENT" \
+            'select(.schema_version == 2 and .environment == $environment) | .region' \
+            "$GITHUB_WORKSPACE/request/$blueprint")"
+          [[ "$environment_region" =~ ^[a-z]{2}-[a-z]+-[0-9]+$ ]]
           cat > "$GITHUB_WORKSPACE/ORCH/providers.tf" <<EOF
           data "oci_identity_regions" "these" {}
           data "oci_identity_tenancy" "this" {
@@ -335,7 +339,7 @@ jobs:
           EOF
           jq -n \
             --arg tenancy_ocid "$TENANCY_OCID" \
-            --arg region "$STATE_REGION" \
+            --arg region "$environment_region" \
             '{tenancy_ocid: $tenancy_ocid, region: $region}' \
             > "$RUNNER_TEMP/oci-credentials.tfvars.json"
 
@@ -364,7 +368,7 @@ jobs:
           initialize_terraform
           terraform -chdir="$GITHUB_WORKSPACE/ORCH" validate -no-color
           plan_args=(
-            -input=false -no-color \
+            -input=false -no-color -refresh=true \
             -var-file="$RUNNER_TEMP/oci-credentials.tfvars.json" \
             -var-file="$RUNNER_TEMP/op04-dependencies.tfvars.json" \
             -var-file="$RUNNER_TEMP/op04-iam.json" \
@@ -376,6 +380,22 @@ jobs:
           fi
           terraform -chdir="$GITHUB_WORKSPACE/ORCH" plan \
             "${plan_args[@]}"
+
+      - name: Check out trusted OP04 plan controls
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          path: controls
+          persist-credentials: false
+
+      - name: Block automated Vault and KMS retirement
+        shell: bash
+        run: |
+          set -euo pipefail
+          terraform -chdir="$GITHUB_WORKSPACE/ORCH" show -json \
+            "$RUNNER_TEMP/op04.tfplan" > "$RUNNER_TEMP/op04-plan.json"
+          python3 "$GITHUB_WORKSPACE/controls/scripts/validate_op04_plan.py" \
+            "$RUNNER_TEMP/op04-plan.json"
 
       - name: Preview OP04 project retirement
         if: >-
@@ -429,6 +449,13 @@ jobs:
           name: project-foundation-handoff-${{ needs.project.outputs.target_project }}
           path: ${{ runner.temp }}/project-handoff
 
+      - name: Check out trusted handoff publication controls
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          path: controls
+          persist-credentials: false
+
       - name: Create a GitHub App installation token
         id: project-bootstrap-token
         uses: actions/create-github-app-token@v3
@@ -442,15 +469,36 @@ jobs:
         uses: actions/github-script@v9
         env:
           PROJECT: ${{ needs.project.outputs.target_project }}
+          HANDOFF_DIRECTORY: ${{ runner.temp }}/project-handoff
         with:
           github-token: ${{ steps.project-bootstrap-token.outputs.token }}
           result-encoding: string
           script: |
+            const fs = require("fs")
+            const handoff = JSON.parse(fs.readFileSync(`${process.env.HANDOFF_DIRECTORY}/project-foundation-handoff.json`, "utf8"))
+            const markdown = fs.readFileSync(`${process.env.HANDOFF_DIRECTORY}/environment_information.md`, "utf8")
+            const regionCodes = JSON.parse(fs.readFileSync(`${process.env.GITHUB_WORKSPACE}/controls/scripts/oci-region-codes.json`, "utf8"))
+            const regionOf = value => {
+              const code = typeof value === "string" ? value.split(".")[3] : undefined
+              return regionCodes[code] || code
+            }
             const match = /^dev-([a-z][a-z0-9]*(?:-[a-z0-9]+)*)$/.exec(process.env.PROJECT)
             if (!match) throw new Error("Only one dev project may be bootstrapped.")
 
             const owner = context.repo.owner
             const repo = `nonprod-${match[1]}`
+            if (handoff.schema_version !== 4 || handoff.environment !== "dev" ||
+                handoff.target_repository !== repo || handoff.project_slug !== repo ||
+                handoff.source_repository !== `${owner}/${context.repo.repo}` ||
+                handoff.handoff_path !== "environments/dev/environment_information.md" ||
+                handoff.secrets_compartment !== handoff.database_compartment ||
+                !/^ocid1\.compartment\.oc1\./.test(handoff.secrets_compartment) ||
+                !/^ocid1\.vault\.oc1\.[a-z0-9-]+\.[A-Za-z0-9_.-]+$/.test(handoff.vault) ||
+                !/^ocid1\.key\.oc1\.[a-z0-9-]+\.[A-Za-z0-9_.-]+$/.test(handoff.vault_key) ||
+                regionOf(handoff.vault) !== handoff.region || regionOf(handoff.vault_key) !== handoff.region ||
+                [handoff.vault, handoff.vault_key, handoff.secrets_compartment, handoff.region].some(value => typeof value !== "string" || !markdown.includes(value))) {
+              throw new Error("The project Vault handoff is incomplete or inconsistent.")
+            }
             core.setOutput("repository", repo)
             try {
               const { data } = await github.rest.repos.get({ owner, repo })
@@ -458,12 +506,17 @@ jobs:
               return "false"
             } catch (error) {
               if (error.status !== 404) throw error
+              const { data: template } = await github.rest.repos.get({ owner, repo: "nonprod-project-template" })
+              if (!template.is_template || template.default_branch !== "main") {
+                throw new Error("The project template must use main as its default branch.")
+              }
               const { data } = await github.rest.repos.createUsingTemplate({
                 template_owner: owner,
                 template_repo: "nonprod-project-template",
                 owner,
                 name: repo,
                 private: true,
+                include_all_branches: false,
               })
               if (!data.private) throw new Error("The generated project repository must be private.")
               return "true"
@@ -473,8 +526,8 @@ jobs:
         uses: actions/github-script@v9
         env:
           HANDOFF_PATH: ${{ runner.temp }}/project-handoff/environment_information.md
-          PROJECT_REPOSITORY: ${{ steps.project-repository.outputs.repository }}
           PROJECT_REPOSITORY_CREATED: ${{ steps.project-repository.outputs.result }}
+          PROJECT_REPOSITORY: ${{ steps.project-repository.outputs.repository }}
         with:
           github-token: ${{ steps.project-bootstrap-token.outputs.token }}
           script: |

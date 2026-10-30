@@ -506,6 +506,24 @@ local render(customer) =
         iam.identity_domain_groups_configuration {
           groups: tbac.project_groups(n, environment, project).groups,
         },
+      vaults_configuration: {
+        default_compartment_id: tbac.child_key(n, environment, project, 'database'),
+        vaults: {
+          [n.key_global('VLT', [environment, project])]: {
+            name: 'vlt-lz-%s-%s' % [environment, project],
+            type: 'DEFAULT',
+          },
+        },
+        keys: {
+          [n.key_global('KMS', [environment, project])]: {
+            name: 'kms-lz-%s-%s' % [environment, project],
+            vault_key: n.key_global('VLT', [environment, project]),
+            algorithm: 'AES',
+            length: 32,
+            protection_mode: 'HSM',
+          },
+        },
+      },
     };
 
   local base_outputs = {

@@ -65,7 +65,7 @@ jobs:
           blueprint="$(
             jq -er --arg environment "$environment" '
               select(
-                .contract_version == 4 and
+                .contract_version == 5 and
                 (.allowed_environments | index($environment)) != null
               ) |
               .environment_blueprints[$environment]

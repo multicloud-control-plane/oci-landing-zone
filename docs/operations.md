@@ -9,95 +9,63 @@ Use this page to find the configuration and success condition for each phase.
 | OP01 | `op01_manage_landing_zone_environment/` | Shared compartments, network, governance, and security match the plan |
 | OP02 | `op02_manage_environment/{environment}/` | Environment resources exist and `project-onboarding-environment.json` is validated |
 | OP03 | `op03_manage_platform_gitops/` | Required platform IAM, network, and compute exist |
-| OP04 | `op04_manage_project/{environment}/{project}/` | Official OE project compartments, TBAC groups, and both handoff files exist |
+| OP04 | `op04_manage_project/{environment}/{project}/` | OE project compartments, TBAC groups, DEFAULT Vault, AES-256 HSM key, and both handoff files exist |
 
-OP03 is optional only when the platform is hosted elsewhere. When it is hosted
-in this tenancy, complete its `infrastructure` and `identity` stages before the
-first OP02: OCI compiles the OP02 runner policies against the existing dynamic
-group. OP02 repeats per environment. OP04 accepts one project target per run
-and remains a Cloud Operator operation.
+OP03 is optional only when the platform is hosted elsewhere. When it is hosted in this tenancy, complete its `infrastructure` and `identity` stages before the first OP02: OCI compiles the OP02 runner policies against the existing dynamic group. OP02 repeats per environment. OP04 accepts one project target per run and remains a Cloud Operator operation.
 
-The generated OP01 final security configuration uses only the reviewed OE
-`master` root CIS Level 1 target. The shared-network and environment child
-targets are deliberately not part of this MVP: their recipes prohibit NSG
-deletion and therefore prevent a project-managed NSG lifecycle and project
-retirement. Do not add a project-specific Security Zone exception; introduce a
-stronger project-zone design only after its create, update, and delete behavior
-has been certified.
+## Frequency and dependency
 
-OP04 creates each delegated project compartment under the environment's
-`PROJECTS` compartment. Project Teams do not manage Security Zones or receive
-Security Zone permissions.
+| Phase | How often | Required predecessor |
+|---|---|---|
+| Bootstrap readiness | Once before automation, and again after bootstrap changes | Private runner and state boundary |
+| OP00 | Once per tenancy; amend only when tenancy-wide IAM changes | Bootstrap readiness |
+| OP01 | Start once at `core`, then advance through `pre` and `final` as environments are promoted | OP00; a protected environment blueprint before `pre` and `final` |
+| OP03 | Once when MCCP is hosted in this tenancy; `infrastructure` then `identity` | OP01 `core`; focused OP01 Bastion update before `identity` |
+| OP02 | Once for every environment | OP03 `identity` when hosted here; otherwise OP01 `core` |
+| OP04 | Once for every project in an existing environment | Successful OP02 and OP01 `final` for that environment |
 
-OP02 creates the fixed MVP runner policies once per environment. They cover
-the `PROJECTS` subtree, shared `NETWORK`, and shared `SECURITY` for Compute,
-ADB, and project NSGs. OP04 does not create a runner policy; it only creates
-the official TBAC project structure.
-Keep these generated scopes unchanged when onboarding or retiring a project.
+The generated OP01 final security configuration uses only the reviewed OE `master` root CIS Level 1 target. The shared-network and environment child targets are deliberately not part of this MVP: their recipes prohibit NSG deletion and therefore prevent a project-managed NSG lifecycle and project retirement. Do not add a project-specific Security Zone exception; introduce a stronger project-zone design only after its create, update, and delete behavior has been certified.
 
-The Hub management security list must allow SSH only from the platform
-Bastion's current private endpoint `/32`. Retrieve that address from OCI,
-record it in `config/customer.jsonnet` as
-`platform_bastion_private_endpoint_cidr`, regenerate OP01, and review the
-focused network plan. A `null` value removes OE's non-authoritative example
-rule and fails closed. Recreate this focused change whenever the Bastion
-endpoint is replaced.
+OP04 creates each delegated project compartment under the environment's `PROJECTS` compartment. Project Teams do not manage Security Zones or receive Security Zone permissions.
+
+OP02 creates the fixed MVP runner policies once per environment. They cover the `PROJECTS` subtree, shared `NETWORK`, and shared `SECURITY` for Compute, ADB, and project NSGs. OP04 does not create a runner policy; it creates the official TBAC project structure and the project Vault and key. Keep these generated scopes unchanged when onboarding or retiring a project.
+
+The Hub management security list must allow SSH only from the platform Bastion's current private endpoint `/32`. Retrieve that address from OCI, record it in `config/customer.jsonnet` as `platform_bastion_private_endpoint_cidr`, regenerate OP01, and review the focused network plan. A `null` value removes OE's non-authoritative example rule and fails closed. Recreate this focused change whenever the Bastion endpoint is replaced.
 
 ## Standard change procedure
 
 1. Confirm the earlier phase outputs and state are healthy.
-2. Edit the protected source configuration and generate only the selected
-   phase with `scripts/generate_foundation.sh`.
+2. Edit the protected source configuration and generate only the selected phase with `scripts/generate_foundation.sh`.
 3. Open a pull request and review the exact Terraform plan.
 4. Check replacements, deletions, IAM scope, routes, CIDRs, and state key.
 5. Obtain independent approval, merge, and verify the workflow result in OCI.
 
-If a plan or apply fails, retain its logs and reconcile OCI with Terraform state
-before retrying. Never repair the failure with an unreviewed local apply or a
-manual state edit.
+If a plan or apply fails, retain its logs and reconcile OCI with Terraform state before retrying. Never repair the failure with an unreviewed local apply or a manual state edit.
 
-If an already merged project apply fails because a reviewed foundation
-dependency is missing or ineffective, correct that foundation through its own
-plan-and-merge gate first. After verifying the project state contains no
-partially created OCI resource, a human operator may rerun only the exact
-failed merge-commit job. Do not push a synthetic no-op manifest change, rerun a
-different commit, or let the Project GitOps skill control the workflow.
+If an already merged project apply fails because a reviewed foundation dependency is missing or ineffective, correct that foundation through its own plan-and-merge gate first. After verifying the project state contains no partially created OCI resource, a human operator may rerun only the exact failed merge-commit job. Do not push a synthetic no-op manifest change, rerun a different commit, or let the Project GitOps skill control the workflow.
 
-An unchanged configuration should not propose updates that remove
-`Oracle-Tags.CreatedBy` or `Oracle-Tags.CreatedOn`. OCI adds those automatic
-default tags after resource creation. The phase workflows use the OCI
-provider's `ignore_defined_tags` setting for exactly those two keys so a later
-apply preserves them and remains idempotent. If either tag appears as a
-removal in a plan, stop before merge and verify that the protected workflow
-still contains that provider setting.
+An unchanged configuration should not propose updates that remove `Oracle-Tags.CreatedBy` or `Oracle-Tags.CreatedOn`. OCI adds those automatic default tags after resource creation. The phase workflows use the OCI provider's `ignore_defined_tags` setting for exactly those two keys so a later apply preserves them and remains idempotent. If either tag appears as a removal in a plan, stop before merge and verify that the protected workflow still contains that provider setting.
 
-An idempotency plan can recreate `local_file.*_output` resources because the
-runner workspace is temporary. Those files are the Orchestrator's dependency
-JSON artifacts, not OCI resources.
+An idempotency plan can recreate `local_file.*_output` resources because the runner workspace is temporary. Those files are the Orchestrator's dependency JSON artifacts, not OCI resources.
 
-The official Observability module has one known normalization exception for an
-Object Storage Service Connector target. OCI does not return
-`target.compartment_id`, while the module supplies it again on every plan. The
-same behavior is recorded in upstream
-[issue 17](https://github.com/oci-landing-zones/terraform-oci-modules-observability/issues/17),
-which was closed as not planned and is still present in the module used by
-Orchestrator release 2.1.4.
+The official Observability module has one known normalization exception for an Object Storage Service Connector target. OCI does not return `target.compartment_id`, while the module supplies it again on every plan. The same behavior is recorded in upstream [issue 17](https://github.com/oci-landing-zones/terraform-oci-modules-observability/issues/17), which was closed as not planned and is still present in the module used by Orchestrator release 2.1.4.
 
-For an unchanged OP01 final configuration, accept repeatability evidence only
-when the complete plan contains:
+For an unchanged OP01 final configuration, accept repeatability evidence only when the complete plan contains:
 
 - ephemeral `local_file.*_output` creates;
-- at most the single in-place
-  `oci_sch_service_connector` update that adds only
-  `target.compartment_id`; and
+- at most the single in-place `oci_sch_service_connector` update that adds only `target.compartment_id`; and
 - no other OCI changes, replacements, or destroys.
 
-Close an idempotency-only pull request without merging it. If the connector
-diff changes any other field, or any other OCI resource changes, stop and
-investigate. Do not patch the downloaded official module or suppress broader
-changes with `ignore_changes`.
+Close an idempotency-only pull request without merging it. If the connector diff changes any other field, or any other OCI resource changes, stop and investigate. Do not patch the downloaded official module or suppress broader changes with `ignore_changes`.
 
-After OP04, use `project-foundation-handoff.json` for machine processing and
-`environment_information.md` for people. The workflow does not create or write to
-a project repository. The schema-3 handoff has a project root plus distinct
-Application, Database, and Infrastructure child-compartment OCIDs.
+After OP04, use `project-foundation-handoff.json` for machine processing and `environment_information.md` for people. The dev onboarding publication job validates these artifacts before creating an absent private project repository from template `main` and publishing its handoff. The schema-4 handoff has a project root plus distinct Application, Database, and Infrastructure child-compartment OCIDs.
+
+## Project Vault lifecycle
+
+Onboarding contract 5 creates exactly one DEFAULT Vault and one AES-256 HSM key in each new project/environment DB compartment through the official Orchestrator v2.3.0 module. Both are declared in the existing OP04 `iam.json` and use its state, runner, and PR, plan, approval, merge, and apply flow. OP02 adds `use vaults` to the existing DB role with the same project TBAC condition. The shared dev runner identity and its current permissions remain unchanged.
+
+The schema-4 handoff requires `vault`, `vault_key`, and `secrets_compartment`. The renderer reads identifiers from the official `security_resources` output and checks the declared logical keys, DB placement, environment region, key shape, and Vault endpoint binding. The secrets compartment is the DB compartment. Missing or inconsistent evidence and older handoffs are rejected. Project Team creates and rotates secrets; onboarding never creates secrets or passwords.
+
+Deploy the code and the OP02 permission change before certifying a fresh dev onboarding. Check the created Vault, key, and handoff, then run a second plan with no managed OCI changes. There is no migration of existing projects, no new VM, and no automatic secret or ADB creation.
+
+Vault and key retirement is manual. CloudOps must remove dependent secrets and resources through the approved process and complete Vault/key deletion before retiring the project foundation. A pending deletion is insufficient. The OP04 plan refresh must confirm their absence; the plan guard rejects Vault, key, or key-version deletion and replacement in either order before apply, including during project destroy. It does not wait, delete secrets, or remove state entries.

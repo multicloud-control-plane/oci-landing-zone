@@ -2,7 +2,7 @@
 //
 // OCI Landing Zone's TBAC add-on is the policy source of truth. This adapter
 // only parameterizes its One-OE preprod example for the environment catalogue
-// used by this foundation; it deliberately does not recreate policy statements.
+// used by this foundation. The DB role also uses its own project's Vault.
 local official_iam =
   import 'addons/oci-tbac/oci_open_lz_one-oe_iam.auto.tfvars.json';
 local official_governance =
@@ -140,7 +140,9 @@ local project_name(environment, project) =
         statements: [
           replace_environment_names(statement, environment)
           for statement in source.statements
-        ],
+        ] + if role == 'database' then [
+          'allow any-user to use vaults in compartment cmp-lz-%s-projects where target.resource.compartment.tag.tn-lzp-proj-role.db-admin = request.principal.group.tag.tn-lzp-proj-role.db-admin' % std.asciiLower(environment),
+        ] else [],
       }
     for role in std.objectFields(roles)
   },
