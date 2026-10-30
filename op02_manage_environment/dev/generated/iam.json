@@ -149,7 +149,8 @@
                "allow any-user to use vss-family in compartment cmp-lz-dev-security where request.principal.group.tag.tn-lzp-proj-role.db-admin = '*'",
                "allow any-user to use bastion in compartment cmp-lz-dev-security where request.principal.group.tag.tn-lzp-proj-role.db-admin = '*'",
                "allow any-user to manage bastion-session in compartment cmp-lz-dev-security where request.principal.group.tag.tn-lzp-proj-role.db-admin = '*'",
-               "allow any-user to read logging-family in compartment cmp-lz-dev-security where request.principal.group.tag.tn-lzp-proj-role.db-admin = '*'"
+               "allow any-user to read logging-family in compartment cmp-lz-dev-security where request.principal.group.tag.tn-lzp-proj-role.db-admin = '*'",
+               "allow any-user to use vaults in compartment cmp-lz-dev-projects where target.resource.compartment.tag.tn-lzp-proj-role.db-admin = request.principal.group.tag.tn-lzp-proj-role.db-admin"
             ]
          },
          "PCY-LZ-DEV-PROJECTS-INFRASTRUCTURE-ADMINISTRATION-KEY": {
