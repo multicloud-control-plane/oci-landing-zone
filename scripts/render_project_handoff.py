@@ -153,8 +153,11 @@ def build_handoff_data(project, project_config, op04_output, blueprint):
         or key.get("compartment_id") != compartments["database"]["ocid"]
         or vault.get("vault_type") != "DEFAULT"
         or key.get("protection_mode") != "HSM"
-        or key.get("key_shape") != [{"algorithm": "AES", "length": 32, "curve_id": None}]
-        and key.get("key_shape") != [{"algorithm": "AES", "length": 32}]
+        or key.get("key_shape") not in (
+            [{"algorithm": "AES", "length": 32}],
+            [{"algorithm": "AES", "length": 32, "curve_id": None}],
+            [{"algorithm": "AES", "length": 32, "curve_id": ""}],
+        )
         or not host or not host.endswith(f".kms.{region}.oraclecloud.com")
         or not endpoint.startswith("https://")
         or key.get("management_endpoint") != endpoint
