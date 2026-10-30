@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 env:
-  ORCHESTRATOR_REVISION: fcf1d7f02c0b4faa1ff55f1776c396452dd51761
+  ORCHESTRATOR_REVISION: d162f24e81b0720803a9c26db2bc96e271cefa09
 
 jobs:
   project:
@@ -335,6 +335,14 @@ jobs:
               region    = "$STATE_REGION"
               key       = "$STATE_KEY"
             }
+          }
+          EOF
+          # OP04 owns its Vault and key together. Security v0.2.3 requires
+          # null for absent external Vault dependencies; Orchestrator v2.3.0
+          # otherwise converts null to {}, selecting a nonexistent data lookup.
+          cat > "$GITHUB_WORKSPACE/ORCH/op04_vault_dependency_override.tf" <<'EOF'
+          module "oci_lz_vaults" {
+            vaults_dependency = null
           }
           EOF
           jq -n \
