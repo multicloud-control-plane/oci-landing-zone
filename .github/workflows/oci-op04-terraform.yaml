@@ -165,6 +165,13 @@ jobs:
           terraform_version: 1.15.8
           terraform_wrapper: false
 
+      - name: Check out trusted OP04 plan controls
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          path: controls
+          persist-credentials: false
+
       - name: Load OP00 and OP02 dependencies
         shell: bash
         env:
@@ -302,6 +309,7 @@ jobs:
             required_providers {
               oci = {
                 source                = "oracle/oci"
+                version               = "= 9.12.1"
                 configuration_aliases = [oci.home]
               }
             }
@@ -327,6 +335,41 @@ jobs:
             --arg region "$environment_region" \
             '{tenancy_ocid: $tenancy_ocid, region: $region}' \
             > "$RUNNER_TEMP/oci-credentials.tfvars.json"
+
+      - name: Configure verified OP04 provider installation
+        shell: bash
+        env:
+          OCI_PROVIDER_MIRROR_PATH: ${{ vars.OP04_OCI_PROVIDER_MIRROR_PATH }}
+        run: |
+          set -euo pipefail
+          umask 077
+          cp "$GITHUB_WORKSPACE/controls/config/op04-provider.lock.hcl" \
+            "$GITHUB_WORKSPACE/ORCH/.terraform.lock.hcl"
+          if [ -n "$OCI_PROVIDER_MIRROR_PATH" ]; then
+            [[ "$OCI_PROVIDER_MIRROR_PATH" = /* ]]
+            test -d "$OCI_PROVIDER_MIRROR_PATH"
+            mirror_path_hcl="$(python3 -c '
+          import json, sys
+          print(json.dumps(sys.argv[1]))
+          ' "$OCI_PROVIDER_MIRROR_PATH")"
+            cli_config="$RUNNER_TEMP/op04-provider-installation.tfrc"
+            cat > "$cli_config" <<EOF
+          provider_installation {
+            filesystem_mirror {
+              path    = $mirror_path_hcl
+              include = ["registry.terraform.io/oracle/oci"]
+            }
+            direct {
+              exclude = ["registry.terraform.io/oracle/oci"]
+            }
+          }
+          EOF
+            {
+              echo "TF_CLI_CONFIG_FILE=$cli_config"
+              echo 'TF_PLUGIN_CACHE_DIR='
+              echo 'TF_PLUGIN_CACHE_MAY_BREAK_DEPENDENCY_LOCK_FILE=false'
+            } >> "$GITHUB_ENV"
+          fi
 
       - name: Initialize and plan OP04
         id: plan
@@ -366,13 +409,6 @@ jobs:
           fi
           terraform -chdir="$GITHUB_WORKSPACE/ORCH" plan \
             "${plan_args[@]}"
-
-      - name: Check out trusted OP04 plan controls
-        uses: actions/checkout@v7.0.1
-        with:
-          ref: ${{ github.event.pull_request.base.sha || github.sha }}
-          path: controls
-          persist-credentials: false
 
       - name: Block automated Vault and KMS retirement
         id: plan-guard
