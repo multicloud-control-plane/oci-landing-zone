@@ -20,6 +20,9 @@ env:
 jobs:
   project:
     name: Plan and apply one OP04 project
+    permissions:
+      contents: read
+      pull-requests: write
     if: >-
       vars.FOUNDATION_AUTOMATION_READY == 'true' &&
       (
@@ -352,6 +355,7 @@ jobs:
             > "$RUNNER_TEMP/oci-credentials.tfvars.json"
 
       - name: Initialize and plan OP04
+        id: plan
         shell: bash
         env:
           OPERATION: ${{ steps.target.outputs.operation }}
@@ -397,6 +401,7 @@ jobs:
           persist-credentials: false
 
       - name: Block automated Vault and KMS retirement
+        id: plan-guard
         shell: bash
         run: |
           set -euo pipefail
@@ -404,6 +409,49 @@ jobs:
             "$RUNNER_TEMP/op04.tfplan" > "$RUNNER_TEMP/op04-plan.json"
           python3 "$GITHUB_WORKSPACE/controls/scripts/validate_op04_plan.py" \
             "$RUNNER_TEMP/op04-plan.json"
+
+      - name: Summarize the guarded OP04 plan
+        id: plan-summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 "$GITHUB_WORKSPACE/controls/scripts/summarize_op04_plan.py" \
+            < "$RUNNER_TEMP/op04-plan.json" > "$RUNNER_TEMP/op04-plan-summary.txt"
+          {
+            echo '### OP04 Terraform plan — resource actions only'
+            echo '```text'
+            cat "$RUNNER_TEMP/op04-plan-summary.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish OP04 plan review
+        if: always() && github.event_name == 'pull_request_target'
+        uses: actions/github-script@v9
+        env:
+          PLAN_STATUS: ${{ steps.plan.outcome }}
+          GUARD_STATUS: ${{ steps.plan-guard.outcome }}
+          SUMMARY_STATUS: ${{ steps.plan-summary.outcome }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        with:
+          script: |
+            const fs = require('fs')
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            const ready = [process.env.PLAN_STATUS, process.env.GUARD_STATUS, process.env.SUMMARY_STATUS].every(value => value === 'success')
+            const summary = ready
+              ? fs.readFileSync(`${process.env.RUNNER_TEMP}/op04-plan-summary.txt`, 'utf8')
+              : 'Plan summary unavailable. Review the failed or skipped steps in this run.'
+            const body = [
+              '<!-- mccp-op04-plan -->',
+              '#### OP04 Terraform plan',
+              `Commit: \`${context.payload.pull_request.head.sha}\``,
+              `Run: [${context.runId}, attempt ${process.env.RUN_ATTEMPT}](${runUrl})`,
+              `Plan: **${process.env.PLAN_STATUS}** · Vault/KMS guard: **${process.env.GUARD_STATUS}** · Summary: **${process.env.SUMMARY_STATUS}**`,
+              '```text', summary.trim(), '```',
+              'This is a plan, not an apply. Independent human review and merge are still required.',
+            ].join('\n\n')
+            if (body.length > 60000) throw new Error('Plan summary exceeds the PR comment limit; review the run summary.')
+            await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body })
 
       - name: Preview OP04 project retirement
         if: >-
