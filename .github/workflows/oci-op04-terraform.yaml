@@ -539,22 +539,63 @@ jobs:
             -input=false -no-color -parallelism=1 -auto-approve \
             "$RUNNER_TEMP/op04-dns-ready.tfplan"
 
-  handoff:
-    name: Generate project handoff after OP04
-    needs: project
-    if: >-
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main' &&
-      needs.project.outputs.operation != 'retirement'
-    permissions:
-      contents: read
-    uses: ./.github/workflows/oci-project-handoff.yaml
-    with:
-      project: ${{ needs.project.outputs.target_project }}
+      - name: Render handoff from applied OP04 outputs
+        if: >-
+          github.event_name == 'push' &&
+          github.ref == 'refs/heads/main' &&
+          steps.target.outputs.operation != 'retirement'
+        shell: bash
+        env:
+          PROJECT: ${{ steps.target.outputs.project }}
+          ENVIRONMENT: ${{ steps.target.outputs.environment }}
+        run: |
+          set -euo pipefail
+          umask 077
+          unset TF_LOG TF_LOG_PATH TF_LOG_CORE TF_LOG_PROVIDER
+          artifact_directory="$RUNNER_TEMP/project-handoff-$GITHUB_RUN_ID"
+          op04_output="$RUNNER_TEMP/op04-handoff-output-$GITHUB_RUN_ID.json"
+          trap 'rm -f -- "$op04_output"' EXIT
+          mkdir -p "$artifact_directory"
+          if [ "$ENVIRONMENT" = "prod" ]; then
+            target_repository="prod-${PROJECT#prod-}"
+          else
+            target_repository="nonprod-${PROJECT#"$ENVIRONMENT"-}"
+          fi
+          project_directory="op04_manage_project/$ENVIRONMENT/$PROJECT"
+          blueprint="$(jq -er --arg environment "$ENVIRONMENT" \
+            '.environment_blueprints[$environment]' \
+            "$GITHUB_WORKSPACE/request/.github/project-onboarding-contract.json")"
+          terraform -chdir="$GITHUB_WORKSPACE/ORCH" output -json > "$op04_output"
+          python3 "$GITHUB_WORKSPACE/controls/scripts/render_project_handoff.py" \
+            --project "$PROJECT" \
+            --project-directory "$GITHUB_WORKSPACE/request/$project_directory" \
+            --op04-output "$op04_output" \
+            --environment-blueprint "$GITHUB_WORKSPACE/request/$blueprint" \
+            --source-repository "$GITHUB_REPOSITORY" \
+            --source-workflow "$GITHUB_WORKFLOW" \
+            --source-run "$GITHUB_RUN_ID" \
+            --source-commit "$GITHUB_SHA" \
+            --op02-state-key "op02_manage_environment/$ENVIRONMENT/terraform.tfstate" \
+            --op04-state-key "$project_directory/terraform.tfstate" \
+            --target-repository "$target_repository" \
+            --handoff-path "environments/$ENVIRONMENT/environment_information.md" \
+            --output "$artifact_directory/environment_information.md" \
+            --handoff-output "$artifact_directory/project-foundation-handoff.json"
+
+      - name: Upload validated project handoff
+        if: >-
+          github.event_name == 'push' &&
+          github.ref == 'refs/heads/main' &&
+          steps.target.outputs.operation != 'retirement'
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: project-foundation-handoff-${{ steps.target.outputs.project }}
+          path: ${{ runner.temp }}/project-handoff-${{ github.run_id }}/
+          if-no-files-found: error
 
   project-repository:
     name: Create development project repository
-    needs: [project, handoff]
+    needs: project
     if: >-
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&

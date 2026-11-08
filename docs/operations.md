@@ -60,6 +60,8 @@ Close an idempotency-only pull request without merging it. If the connector diff
 
 After OP04, use `project-foundation-handoff.json` for machine processing and `environment_information.md` for people. The dev onboarding publication job validates these artifacts before creating an absent private project repository from template `main` and publishing its handoff. The schema-4 handoff has a project root plus distinct Application, Database, and Infrastructure child-compartment OCIDs.
 
+The apply job renders both handoff files from its initialized Terraform outputs and uploads only those validated files. The repository publication job consumes that artifact and uses GitHub only. To recover a missing handoff after a completed apply, run `OCI Project Foundation Handoff` on `main` for the exact project. It reads the existing state through OCI CLI with Instance Principal and uses the same renderer, without planning or applying resources. Temporary state and output files are protected and removed; raw state is never uploaded.
+
 ## Project Vault lifecycle
 
 Onboarding contract 5 creates exactly one DEFAULT Vault and one AES-256 HSM key in each new project/environment DB compartment through the official Orchestrator v2.3.0 module. Both are declared in the existing OP04 `iam.json` and use its state, runner, and PR, plan, approval, merge, and apply flow. OP02 adds `use vaults` to the existing DB role with the same project TBAC condition. The shared dev runner identity and its current permissions remain unchanged.
