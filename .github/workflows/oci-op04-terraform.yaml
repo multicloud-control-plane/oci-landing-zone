@@ -446,9 +446,12 @@ jobs:
               '#### OP04 Terraform plan',
               `Commit: \`${context.payload.pull_request.head.sha}\``,
               `Run: [${context.runId}, attempt ${process.env.RUN_ATTEMPT}](${runUrl})`,
-              `Plan: **${process.env.PLAN_STATUS}** · Vault/KMS guard: **${process.env.GUARD_STATUS}** · Summary: **${process.env.SUMMARY_STATUS}**`,
-              '```text', summary.trim(), '```',
+              `**Plan:** \`${process.env.PLAN_STATUS}\` · **Vault/KMS guard:** \`${process.env.GUARD_STATUS}\` · **Summary:** \`${process.env.SUMMARY_STATUS}\``,
+              '<details><summary>Resource actions (values omitted)</summary>',
+              '```terraform', summary.trim(), '```',
+              '</details>',
               'This is a plan, not an apply. Independent human review and merge are still required.',
+              `*By @${context.actor}*`,
             ].join('\n\n')
             if (body.length > 60000) throw new Error('Plan summary exceeds the PR comment limit; review the run summary.')
             await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body })
