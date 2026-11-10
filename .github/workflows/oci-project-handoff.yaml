@@ -61,7 +61,7 @@ jobs:
           blueprint="$(
             jq -er --arg environment "$environment" '
               select(
-                .contract_version == 5 and
+                .contract_version == 6 and
                 (.allowed_environments | index($environment)) != null
               ) |
               .environment_blueprints[$environment]
@@ -69,7 +69,7 @@ jobs:
           )"
           test -f "$blueprint"
           jq -e --arg environment "$environment" '
-            .schema_version == 2 and .environment == $environment
+            .schema_version == 3 and .environment == $environment
           ' "$blueprint" >/dev/null
           artifact_directory="$RUNNER_TEMP/project-handoff-$GITHUB_RUN_ID"
           state_directory="$RUNNER_TEMP/op04-state-$GITHUB_RUN_ID"
@@ -84,10 +84,22 @@ jobs:
           jq -e '.outputs | select(type == "object") | {iam_resources, security_resources}' \
             "$state_directory/op04-state.json" \
             > "$state_directory/op04-output.json"
+          vault_id="$(jq -er '.security.workload_vault.ocid' "$blueprint")"
+          vault_region="$(jq -er '.region' "$blueprint")"
+          oci kms management vault get --vault-id "$vault_id" \
+            --region "$vault_region" --auth instance_principal \
+            > "$state_directory/vault-metadata.json"
+          key_id="$(jq -er '.security_resources.value.keys | to_entries | select(length == 1) | .[0].value.id' "$state_directory/op04-output.json")"
+          vault_endpoint="$(jq -er '.data."management-endpoint"' "$state_directory/vault-metadata.json")"
+          oci kms management key get --key-id "$key_id" \
+            --endpoint "$vault_endpoint" --region "$vault_region" --auth instance_principal \
+            > "$state_directory/key-metadata.json"
           python3 scripts/render_project_handoff.py \
             --project "$PROJECT" \
             --project-directory "$project_directory" \
             --op04-output "$state_directory/op04-output.json" \
+            --vault-metadata "$state_directory/vault-metadata.json" \
+            --key-metadata "$state_directory/key-metadata.json" \
             --environment-blueprint "$blueprint" \
             --source-repository "$GITHUB_REPOSITORY" \
             --source-workflow "$GITHUB_WORKFLOW" \

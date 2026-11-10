@@ -9,6 +9,7 @@ import json
 import re
 from pathlib import Path
 from urllib.parse import urlparse
+from workload_vault import validate_workload_vault
 
 
 PROJECT_PATTERN = re.compile(
@@ -68,10 +69,10 @@ def find_project_config(project_directory):
     return value
 
 
-def build_handoff_data(project, project_config, op04_output, blueprint):
+def build_handoff_data(project, project_config, op04_output, blueprint, vault_metadata=None, key_metadata=None):
     environment, project_name = validate_project(project)
     if (
-        blueprint.get("schema_version") != 2
+        blueprint.get("schema_version") != 3
         or blueprint.get("environment") != environment
         or REGION_PATTERN.fullmatch(str(blueprint.get("region", ""))) is None
     ):
@@ -122,13 +123,14 @@ def build_handoff_data(project, project_config, op04_output, blueprint):
         }
         for role, child_key in child_keys.items()
     }
-    vault_key = f"VLT-LZ-{environment.upper()}-{project_name.upper()}-KEY"
+    authorized_vault = validate_workload_vault(blueprint)
+    vault_key = authorized_vault["key"]
     kms_key = f"KMS-LZ-{environment.upper()}-{project_name.upper()}-KEY"
     expected_vault_config = {
         "default_compartment_id": child_keys["database"],
-        "vaults": {vault_key: {"name": f"vlt-lz-{project}", "type": "DEFAULT"}},
+        "vaults": {},
         "keys": {kms_key: {
-            "name": f"kms-lz-{project}", "vault_key": vault_key,
+            "name": f"kms-lz-{project}", "vault_id": authorized_vault["ocid"],
             "algorithm": "AES", "length": 32, "protection_mode": "HSM",
         }},
     }
@@ -137,11 +139,17 @@ def build_handoff_data(project, project_config, op04_output, blueprint):
     security = require_mapping(op04_output.get("security_resources"), "security_resources")
     vaults = require_mapping(security.get("vaults"), "security_resources.vaults")
     keys = require_mapping(security.get("keys"), "security_resources.keys")
-    if set(vaults) != {vault_key} or set(keys) != {kms_key}:
-        raise HandoffError("expected exactly one project Vault and key output")
-    vault_ocid = require_ocid(vaults, vault_key, "vault", "Vault")
+    if vaults or set(keys) != {kms_key}:
+        raise HandoffError("expected no managed Vaults and exactly one project key output")
+    vault_ocid = authorized_vault["ocid"]
     key_ocid = require_ocid(keys, kms_key, "key", "Vault key")
-    vault, key = vaults[vault_key], keys[kms_key]
+    if not isinstance(vault_metadata, dict):
+        raise HandoffError("current shared Vault metadata is required before handoff publication")
+    vault = {k.replace("-", "_"): v for k, v in vault_metadata.items()}
+    key = keys[kms_key]
+    if (vault.get("id") != vault_ocid or vault.get("lifecycle_state", vault.get("state")) != "ACTIVE"
+        or key.get("state") != "ENABLED"):
+        raise HandoffError("Vault/key identity or lifecycle state is invalid")
     endpoint = vault.get("management_endpoint")
     host = urlparse(endpoint).hostname if isinstance(endpoint, str) else None
     region = blueprint["region"]
@@ -149,7 +157,7 @@ def build_handoff_data(project, project_config, op04_output, blueprint):
     # Keep identical to the independently packaged Cloud Operator validator data.
     region_codes = load_json(Path(__file__).with_name("oci-region-codes.json"))
     if (
-        vault.get("compartment_id") != compartments["database"]["ocid"]
+        vault.get("compartment_id") != blueprint["compartments"]["security"]["ocid"]
         or key.get("compartment_id") != compartments["database"]["ocid"]
         or vault.get("vault_type") != "DEFAULT"
         or key.get("protection_mode") != "HSM"
@@ -165,6 +173,18 @@ def build_handoff_data(project, project_config, op04_output, blueprint):
                for value in (vault_ocid, key_ocid))
     ):
         raise HandoffError("Vault/key outputs do not match the DB compartment, region or key binding")
+    if not isinstance(key_metadata, dict):
+        raise HandoffError("current project key metadata is required before handoff publication")
+    current_key = {name.replace("-", "_"): value for name, value in key_metadata.items()}
+    shape = current_key.get("key_shape")
+    if (current_key.get("id") != key_ocid
+        or current_key.get("vault_id") != vault_ocid
+        or current_key.get("compartment_id") != compartments["database"]["ocid"]
+        or current_key.get("lifecycle_state") != "ENABLED"
+        or current_key.get("protection_mode") != "HSM"
+        or not isinstance(shape, dict)
+        or shape.get("algorithm") != "AES" or shape.get("length") != 32):
+        raise HandoffError("current project key metadata does not match the enabled project AES-256 HSM key and Vault")
     network = require_mapping(blueprint.get("network"), "blueprint network")
     vcn = require_mapping(network.get("vcn"), "blueprint VCN")
     subnets = require_mapping(network.get("subnets"), "blueprint subnets")
@@ -205,6 +225,7 @@ This credential-free document is the human-readable representation of the valida
 
 | Reference | Value |
 |---|---|
+| Handoff schema | 5 |
 | Project | {project_name} |
 | Environment | {data['environment']} |
 | OCI region | {data['region']} |
@@ -228,7 +249,7 @@ The application, database, and infrastructure fields in the machine handoff are 
 | Vault key | {data['vault_key']['key']} | {data['vault_key']['ocid']} |
 | Secrets compartment | {data['compartments']['database']['key']} | {data['secrets_compartment']} |
 
-The DEFAULT Vault and AES-256 HSM key are in the DB compartment in {data['region']}. Project Team creates and rotates secrets in this scope. CloudOps must complete manual Vault and key retirement before retiring the project. OP04 never deletes them automatically.
+The DEFAULT workload Vault is shared by the environment in {data['region']} and administered by CloudOps in environment security. The project AES-256 HSM key and secrets belong to the DB compartment. Key material remains inside HSM; its OCID is a reference. Project Team creates and rotates secrets manually. CloudOps retires the project secrets and key before its foundation, and always retains the shared Vault. OP04 never deletes Vaults or keys automatically.
 
 ## OP02 network
 
@@ -274,7 +295,7 @@ def build_machine_handoff(
     ):
         raise HandoffError("handoff routing or provenance is invalid")
     return {
-        "schema_version": 4,
+        "schema_version": 5,
         "cloud": "oci",
         "project_slug": target_repository,
         "environment": environment,
@@ -310,6 +331,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project", required=True)
     parser.add_argument("--project-directory", required=True, type=Path)
+    parser.add_argument("--key-metadata", required=True, type=Path)
+    parser.add_argument("--vault-metadata", required=True, type=Path)
     parser.add_argument("--op04-output", required=True, type=Path)
     parser.add_argument("--environment-blueprint", required=True, type=Path)
     parser.add_argument("--source-repository", required=True)
@@ -329,6 +352,8 @@ def main():
             find_project_config(args.project_directory),
             load_json(args.op04_output),
             load_json(args.environment_blueprint),
+            load_json(args.vault_metadata).get("data", load_json(args.vault_metadata)),
+            load_json(args.key_metadata).get("data", load_json(args.key_metadata)),
         )
         document = render_markdown(data)
         handoff = build_machine_handoff(
@@ -350,7 +375,7 @@ def main():
             json.dumps(handoff, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
-    except (HandoffError, OSError) as exc:
+    except (ValueError, OSError) as exc:
         parser.error(str(exc))
     return 0
 
