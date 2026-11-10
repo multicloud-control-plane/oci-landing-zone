@@ -52,7 +52,13 @@
   "parent_compartment_key": "CMP-LZ-DEV-PROJECTS-KEY",
   "parent_compartment_ocid": "ocid1.compartment.oc1..aaaaaaaae4yepgdgaxp35fiqtzbli5qjlvreswjq4enxvel5is3majrfmscq",
   "region": "eu-frankfurt-1",
-  "schema_version": 2,
+  "schema_version": 3,
+  "security": {
+    "workload_vault": {
+      "key": "VLT-LZ-DEV-WORKLOADS-KEY",
+      "ocid": "ocid1.vault.oc1.eu-frankfurt-1.envpdwh4aacfg.abtheljshnrgotv6gb2qqucgd3koyvqqon5tkkxtydij7hii7rujxzk2qdxa"
+    }
+  },
   "source": {
     "commit_sha": "7871d63c2641b5ef30a4e93756e8a4f54a197470",
     "repository": "multicloud-control-plane/oci-landing-zone",
