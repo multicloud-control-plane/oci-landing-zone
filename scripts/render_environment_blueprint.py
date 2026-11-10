@@ -85,6 +85,7 @@ def main():
         "output",
     ):
         parser.add_argument("--" + name, required=True)
+    parser.add_argument("--previous-blueprint", type=Path)
     args = parser.parse_args()
 
     if not all(
@@ -158,7 +159,7 @@ def main():
         }
 
     artifact = {
-        "schema_version": 2,
+        "schema_version": 3,
         "environment": args.environment,
         "region": args.region,
         "tenancy_ocid": args.tenancy_ocid,
@@ -175,6 +176,18 @@ def main():
             "commit_sha": args.commit_sha,
         },
     }
+    if args.previous_blueprint is not None:
+        previous = load_json(args.previous_blueprint)
+        if "workload_vault" in previous.get("security", {}):
+            from workload_vault import validate_workload_vault
+            for field in ("environment", "region", "tenancy_ocid", "parent_compartment_ocid"):
+                if previous.get(field) != artifact.get(field):
+                    raise SystemExit("Cannot preserve a workload Vault across incompatible environments")
+            if previous.get("compartments", {}).get("security") != artifact["compartments"]["security"]:
+                raise SystemExit("Cannot preserve a workload Vault across security compartments")
+            artifact["security"] = {"workload_vault": validate_workload_vault(previous)}
+    # An initial OP02 capture can be promoted before the administrative Vault
+    # exists. Onboarding fails closed until CloudOps registers it in blueprint 3.
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(

@@ -508,16 +508,11 @@ local render(customer) =
         },
       vaults_configuration: {
         default_compartment_id: tbac.child_key(n, environment, project, 'database'),
-        vaults: {
-          [n.key_global('VLT', [environment, project])]: {
-            name: 'vlt-lz-%s-%s' % [environment, project],
-            type: 'DEFAULT',
-          },
-        },
+        vaults: {},
         keys: {
           [n.key_global('KMS', [environment, project])]: {
             name: 'kms-lz-%s-%s' % [environment, project],
-            vault_key: n.key_global('VLT', [environment, project]),
+            vault_id: (import 'workload_vaults.json')[environment].ocid,
             algorithm: 'AES',
             length: 32,
             protection_mode: 'HSM',

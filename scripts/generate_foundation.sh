@@ -47,7 +47,27 @@ for environment in "${environments[@]}"; do
   done < <(jq -r --arg environment "$environment" \
     '.[$environment][]' config/projects.json)
 done
-jsonnet -J "$temporary_directory/oe/gen" -J "$temporary_directory/oe" \
+# Validate authorized references before rendering any project key. No Vault is
+# created or imported into OP04 state.
+python3 - "$temporary_directory/workload_vaults.json" <<'PYVAULT'
+import json, sys
+from pathlib import Path
+sys.path.insert(0, 'scripts')
+from workload_vault import validate_workload_vault
+catalog = json.loads(Path('config/projects.json').read_text())
+contract = json.loads(Path('.github/project-onboarding-contract.json').read_text())
+if contract.get('contract_version') != 6:
+    raise SystemExit('Onboarding contract 6 is required; legacy contracts are unsupported.')
+refs = {}
+for environment, projects in catalog.items():
+    if projects:
+        blueprint = json.loads(Path(contract['environment_blueprints'][environment]).read_text())
+        if blueprint.get('environment') != environment:
+            raise SystemExit('Incompatible environment blueprint.')
+        refs[environment] = validate_workload_vault(blueprint)
+Path(sys.argv[1]).write_text(json.dumps(refs))
+PYVAULT
+jsonnet -J "$temporary_directory" -J "$temporary_directory/oe/gen" -J "$temporary_directory/oe" \
   --multi "$rendered" config/render.jsonnet
 
 if rg -n '__[A-Z0-9_]+__' config/customer.jsonnet; then

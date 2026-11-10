@@ -104,6 +104,13 @@ jobs:
             echo "operation=$operation"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Check out trusted OP04 plan controls
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          path: controls
+          persist-credentials: false
+
       - name: Validate the editable OP04 IAM input
         shell: bash
         env:
@@ -121,7 +128,21 @@ jobs:
             iam_input="$GITHUB_WORKSPACE/request/$OP04_ROOT/iam.json"
             test -f "$iam_input"
           fi
-          jq -e --arg project "${OP04_ROOT##*/}" '
+          environment="$(cut -d/ -f2 <<< "$OP04_ROOT")"
+          contract="$GITHUB_WORKSPACE/controls/.github/project-onboarding-contract.json"
+          blueprint="$(jq -er --arg environment "$environment" \
+            'select(.contract_version == 6) | .environment_blueprints[$environment]' "$contract")"
+          export PYTHONPATH="$GITHUB_WORKSPACE/controls/scripts"
+          vault_id="$(python3 - "$GITHUB_WORKSPACE/controls/$blueprint" "$environment" <<'PYVAULT'
+          import json, sys
+          from workload_vault import validate_workload_vault
+          blueprint = json.load(open(sys.argv[1]))
+          if blueprint.get("environment") != sys.argv[2]:
+              raise SystemExit("Protected blueprint environment does not match OP04")
+          print(validate_workload_vault(blueprint)["ocid"])
+          PYVAULT
+          )"
+          jq -e --arg vault_id "$vault_id" --arg project "${OP04_ROOT##*/}" '
             ("LZ-" + ($project | ascii_upcase)) as $token |
             keys == [
               "compartments_configuration",
@@ -129,16 +150,17 @@ jobs:
               "vaults_configuration"
             ] and .vaults_configuration == {
               default_compartment_id: ("CMP-" + $token + "-DB-KEY"),
-              vaults: {("VLT-" + $token + "-KEY"): {
-                name: ("vlt-lz-" + $project), type: "DEFAULT"
-              }},
+              vaults: {},
               keys: {("KMS-" + $token + "-KEY"): {
                 name: ("kms-lz-" + $project),
-                vault_key: ("VLT-" + $token + "-KEY"),
+                vault_id: $vault_id,
                 algorithm: "AES", length: 32, protection_mode: "HSM"
               }}
             }
-          ' "$iam_input" >/dev/null
+          ' "$iam_input" >/dev/null || {
+            echo "OP04 requires contract 6 and a project key in the authorized shared Vault; legacy project declarations are unsupported." >&2
+            exit 1
+          }
           if rg -n '__[A-Za-z0-9_]+__' "$iam_input"; then
             echo "Unresolved OP04 placeholder." >&2
             exit 1
@@ -164,13 +186,6 @@ jobs:
         with:
           terraform_version: 1.15.8
           terraform_wrapper: false
-
-      - name: Check out trusted OP04 plan controls
-        uses: actions/checkout@v7.0.1
-        with:
-          ref: ${{ github.event.pull_request.base.sha || github.sha }}
-          path: controls
-          persist-credentials: false
 
       - name: Load OP00 and OP02 dependencies
         shell: bash
@@ -258,10 +273,10 @@ jobs:
           done
           blueprint="$(jq -er --arg environment "$ENVIRONMENT" \
             '.environment_blueprints[$environment]' \
-            "$GITHUB_WORKSPACE/request/.github/project-onboarding-contract.json")"
+            "$GITHUB_WORKSPACE/controls/.github/project-onboarding-contract.json")"
           environment_region="$(jq -er --arg environment "$ENVIRONMENT" \
-            'select(.schema_version == 2 and .environment == $environment) | .region' \
-            "$GITHUB_WORKSPACE/request/$blueprint")"
+            'select(.schema_version == 3 and .environment == $environment) | .region' \
+            "$GITHUB_WORKSPACE/controls/$blueprint")"
           [[ "$environment_region" =~ ^[a-z]{2}-[a-z]+-[0-9]+$ ]]
           cat > "$GITHUB_WORKSPACE/ORCH/providers.tf" <<EOF
           data "oci_identity_regions" "these" {}
@@ -574,13 +589,25 @@ jobs:
           project_directory="op04_manage_project/$ENVIRONMENT/$PROJECT"
           blueprint="$(jq -er --arg environment "$ENVIRONMENT" \
             '.environment_blueprints[$environment]' \
-            "$GITHUB_WORKSPACE/request/.github/project-onboarding-contract.json")"
+            "$GITHUB_WORKSPACE/controls/.github/project-onboarding-contract.json")"
           terraform -chdir="$GITHUB_WORKSPACE/ORCH" output -json > "$op04_output"
+          vault_id="$(jq -er '.security.workload_vault.ocid' "$GITHUB_WORKSPACE/controls/$blueprint")"
+          vault_region="$(jq -er '.region' "$GITHUB_WORKSPACE/controls/$blueprint")"
+          oci kms management vault get --vault-id "$vault_id" \
+            --region "$vault_region" --auth instance_principal \
+            > "$RUNNER_TEMP/op04-vault-metadata.json"
+          key_id="$(jq -er '.security_resources.value.keys | to_entries | select(length == 1) | .[0].value.id' "$op04_output")"
+          vault_endpoint="$(jq -er '.data."management-endpoint"' "$RUNNER_TEMP/op04-vault-metadata.json")"
+          oci kms management key get --key-id "$key_id" \
+            --endpoint "$vault_endpoint" --region "$vault_region" --auth instance_principal \
+            > "$RUNNER_TEMP/op04-key-metadata.json"
           python3 "$GITHUB_WORKSPACE/controls/scripts/render_project_handoff.py" \
             --project "$PROJECT" \
             --project-directory "$GITHUB_WORKSPACE/request/$project_directory" \
             --op04-output "$op04_output" \
-            --environment-blueprint "$GITHUB_WORKSPACE/request/$blueprint" \
+            --vault-metadata "$RUNNER_TEMP/op04-vault-metadata.json" \
+            --key-metadata "$RUNNER_TEMP/op04-key-metadata.json" \
+            --environment-blueprint "$GITHUB_WORKSPACE/controls/$blueprint" \
             --source-repository "$GITHUB_REPOSITORY" \
             --source-workflow "$GITHUB_WORKFLOW" \
             --source-run "$GITHUB_RUN_ID" \
@@ -660,7 +687,7 @@ jobs:
 
             const owner = context.repo.owner
             const repo = `nonprod-${match[1]}`
-            if (handoff.schema_version !== 4 || handoff.environment !== "dev" ||
+            if (handoff.schema_version !== 5 || handoff.environment !== "dev" ||
                 handoff.target_repository !== repo || handoff.project_slug !== repo ||
                 handoff.source_repository !== `${owner}/${context.repo.repo}` ||
                 handoff.handoff_path !== "environments/dev/environment_information.md" ||

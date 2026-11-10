@@ -366,8 +366,14 @@ jobs:
             iam_resources > "$RUNNER_TEMP/op02-iam.json"
           terraform -chdir="$GITHUB_WORKSPACE/ORCH" output -json \
             network_resources > "$RUNNER_TEMP/op02-network-resources.json"
+          previous_args=()
+          previous="$GITHUB_WORKSPACE/trusted/blueprints/$ENVIRONMENT/project-onboarding-environment.json"
+          if [ -f "$previous" ]; then
+            previous_args=(--previous-blueprint "$previous")
+          fi
           python3 \
             "$GITHUB_WORKSPACE/trusted/scripts/render_environment_blueprint.py" \
+            "${previous_args[@]}" \
             --environment "$ENVIRONMENT" \
             --region "$REGION" \
             --tenancy-ocid "$TENANCY_OCID" \
