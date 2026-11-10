@@ -1,0 +1,88 @@
+{
+   "compartments_configuration": {
+      "compartments": {
+         "CMP-LZ-DEV-PROJECT131-KEY": {
+            "children": {
+               "CMP-LZ-DEV-PROJECT131-APP-KEY": {
+                  "defined_tags": {
+                     "tn-lzp-proj-role.app-admin": "grp-lz-dev-project131-app-admins"
+                  },
+                  "description": "OCI Landing Zone TBAC project app compartment.",
+                  "name": "cmp-lz-dev-project131-app"
+               },
+               "CMP-LZ-DEV-PROJECT131-DB-KEY": {
+                  "defined_tags": {
+                     "tn-lzp-proj-role.db-admin": "grp-lz-dev-project131-db-admins"
+                  },
+                  "description": "OCI Landing Zone TBAC project database compartment.",
+                  "name": "cmp-lz-dev-project131-db"
+               },
+               "CMP-LZ-DEV-PROJECT131-INFRA-KEY": {
+                  "defined_tags": {
+                     "tn-lzp-proj-role.infra-admin": "grp-lz-dev-project131-infra-admins"
+                  },
+                  "description": "OCI Landing Zone TBAC project infrastructure compartment.",
+                  "name": "cmp-lz-dev-project131-infra"
+               }
+            },
+            "defined_tags": {
+               "tn-lzp-proj-role.proj-admin": "grp-lz-dev-project131-admins"
+            },
+            "description": "OCI Landing Zone TBAC project root compartment.",
+            "name": "cmp-lz-dev-project131"
+         }
+      },
+      "default_parent_id": "CMP-LZ-DEV-PROJECTS-KEY",
+      "enable_delete": "true"
+   },
+   "identity_domain_groups_configuration": {
+      "default_identity_domain_id": "COMMON-DOMAIN",
+      "groups": {
+         "GRP-LZ-DEV-PROJECT131-ADMINS-KEY": {
+            "defined_tags": {
+               "tn-lzp-proj-role.proj-admin": "grp-lz-dev-project131-admins"
+            },
+            "description": "OCI Landing Zone TBAC project administrators.",
+            "name": "grp-lz-dev-project131-admins"
+         },
+         "GRP-LZ-DEV-PROJECT131-APP-ADMINS-KEY": {
+            "defined_tags": {
+               "tn-lzp-proj-role.app-admin": "grp-lz-dev-project131-app-admins",
+               "tn-lzp-proj-role.proj-admin": "grp-lz-dev-project131-admins"
+            },
+            "description": "OCI Landing Zone TBAC project app administrators.",
+            "name": "grp-lz-dev-project131-app-admins"
+         },
+         "GRP-LZ-DEV-PROJECT131-DB-ADMINS-KEY": {
+            "defined_tags": {
+               "tn-lzp-proj-role.db-admin": "grp-lz-dev-project131-db-admins",
+               "tn-lzp-proj-role.proj-admin": "grp-lz-dev-project131-admins"
+            },
+            "description": "OCI Landing Zone TBAC project database administrators.",
+            "name": "grp-lz-dev-project131-db-admins"
+         },
+         "GRP-LZ-DEV-PROJECT131-INFRA-ADMINS-KEY": {
+            "defined_tags": {
+               "tn-lzp-proj-role.infra-admin": "grp-lz-dev-project131-infra-admins",
+               "tn-lzp-proj-role.proj-admin": "grp-lz-dev-project131-admins"
+            },
+            "description": "OCI Landing Zone TBAC project infrastructure administrators.",
+            "name": "grp-lz-dev-project131-infra-admins"
+         }
+      },
+      "ignore_external_membership_updates": true
+   },
+   "vaults_configuration": {
+      "default_compartment_id": "CMP-LZ-DEV-PROJECT131-DB-KEY",
+      "keys": {
+         "KMS-LZ-DEV-PROJECT131-KEY": {
+            "algorithm": "AES",
+            "length": 32,
+            "name": "kms-lz-dev-project131",
+            "protection_mode": "HSM",
+            "vault_id": "ocid1.vault.oc1.eu-frankfurt-1.envpdwh4aacfg.abtheljshnrgotv6gb2qqucgd3koyvqqon5tkkxtydij7hii7rujxzk2qdxa"
+         }
+      },
+      "vaults": { }
+   }
+}
