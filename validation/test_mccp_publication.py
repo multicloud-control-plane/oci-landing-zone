@@ -54,6 +54,7 @@ class PublicationTests(unittest.TestCase):
         self.assertEqual(listener["port"], "443")
         self.assertEqual(listener["hostname_keys"], ["MCCP-HOSTNAME-KEY"])
         self.assertEqual(listener["ssl_configuration"]["certificate_ids"], [publication()["certificate_id"]])
+        self.assertIs(listener["ssl_configuration"].get("verify_peer_certificate"), False)
         backend = lb["backend_sets"]["MCCP-BACKEND-KEY"]
         self.assertTrue(backend["ssl_configuration"]["verify_peer_certificate"])
         self.assertEqual(backend["backends"]["MCCP-ADB-KEY"]["port"], 443)

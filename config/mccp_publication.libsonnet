@@ -121,7 +121,7 @@ local valid_hostname(hostname) =
                         'MCCP-HTTPS-KEY': {
                           name: 'mccp-https', port: '443', protocol: 'HTTP',
                           default_backend_set_key: 'MCCP-BACKEND-KEY', hostname_keys: ['MCCP-HOSTNAME-KEY'],
-                          ssl_configuration: { certificate_ids: [p.certificate_id], protocols: ['TLSv1.2'] },
+                          ssl_configuration: { certificate_ids: [p.certificate_id], protocols: ['TLSv1.2'], verify_peer_certificate: false },
                         },
                       },
                     },
