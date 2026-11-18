@@ -1,0 +1,97 @@
+name: MCCP platform manual deployment
+on:
+  workflow_dispatch:
+    inputs:
+      platform_revision:
+        description: Reviewed full commit SHA on apex-mccp-platform main
+        required: true
+        type: string
+      operation:
+        description: Plan first; apply only after human review
+        type: choice
+        options: [plan, apply]
+        default: plan
+        required: true
+      approved_revision:
+        description: For apply, repeat the exact reviewed platform SHA
+        type: string
+        required: false
+permissions:
+  contents: read
+concurrency:
+  group: mccp-platform-oci
+  cancel-in-progress: false
+jobs:
+  platform:
+    if: github.ref == 'refs/heads/main' && vars.FOUNDATION_AUTOMATION_READY == 'true' && vars.MCCP_AUTOMATION_READY == 'true'
+    runs-on: ${{ fromJSON(vars.FOUNDATION_RUNNER_LABELS || '["self-hosted","linux","arm64","mccp-foundation"]') }}
+    timeout-minutes: 60
+    env:
+      MCCP_PLATFORM_REVISION: ${{ inputs.platform_revision }}
+      MCCP_APPROVED_REVISION: ${{ inputs.approved_revision }}
+      MCCP_OPERATION: ${{ inputs.operation }}
+      MCCP_AUTOMATION_READY: ${{ vars.MCCP_AUTOMATION_READY }}
+      OCI_TENANCY_OCID: ${{ vars.OCI_TENANCY_OCID }}
+      REGION: ${{ vars.REGION }}
+      OCI_TF_STATE_NAMESPACE: ${{ vars.OCI_TF_STATE_NAMESPACE }}
+      OCI_TF_STATE_BUCKET: ${{ vars.OCI_TF_STATE_BUCKET }}
+      OCI_NAMESPACE: ${{ vars.OCI_TF_STATE_NAMESPACE }}
+      MCCP_STATE_BUCKET: ${{ vars.OCI_TF_STATE_BUCKET }}
+      FOUNDATION_DEPENDENCY_BUCKET: ${{ vars.OCI_TF_STATE_BUCKET }}
+    steps:
+      - name: Validate the manual request
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$MCCP_PLATFORM_REVISION" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$MCCP_OPERATION" = plan || "$MCCP_OPERATION" = apply ]]
+          if [[ "$MCCP_OPERATION" = apply ]]; then
+            [[ "$MCCP_APPROVED_REVISION" = "$MCCP_PLATFORM_REVISION" ]]
+          fi
+      - name: Check out foundation controls
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          path: foundation
+          persist-credentials: false
+      - name: Read the private workload repository with the existing GitHub App
+        id: workload-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.PROJECT_BOOTSTRAP_APP_ID }}
+          private-key: ${{ secrets.PROJECT_BOOTSTRAP_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: apex-mccp-platform
+          permission-contents: read
+      - name: Check out the reviewed workload revision
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: multicloud-control-plane/apex-mccp-platform
+          ref: ${{ inputs.platform_revision }}
+          token: ${{ steps.workload-token.outputs.token }}
+          path: workload
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require a revision already adopted on workload main
+        shell: bash
+        working-directory: workload
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$MCCP_PLATFORM_REVISION"
+          git merge-base --is-ancestor "$MCCP_PLATFORM_REVISION" origin/main
+      - name: Prepare runtime references without changing the workload declaration
+        run: python3 foundation/scripts/prepare_mccp_configuration.py workload/config/platform.json "${{ runner.temp }}/mccp-platform.json"
+      - name: Use the existing foundation Terraform version
+        uses: hashicorp/setup-terraform@v4.0.1
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+      - name: Export only official foundation references
+        run: python3 foundation/scripts/export_platform_dependencies.py
+      - name: Plan or apply the separate MCCP stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=()
+          if [[ "$MCCP_OPERATION" = apply ]]; then args+=(--apply); fi
+          python3 workload/scripts/deploy.py "${{ runner.temp }}/mccp-platform.json" "${args[@]}"

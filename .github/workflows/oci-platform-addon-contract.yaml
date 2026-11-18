@@ -1,10 +1,10 @@
 name: MCCP platform integration contracts
 on:
   pull_request:
-    paths: ['config/mccp_publication.libsonnet', 'config/render.libsonnet', 'scripts/export_platform_dependencies.py', 'validation/**', '.github/workflows/oci-*platform*.yaml']
+    paths: ['config/mccp_publication.libsonnet', 'config/render.libsonnet', 'scripts/export_platform_dependencies.py', 'scripts/prepare_mccp_configuration.py', 'validation/**', '.github/workflows/oci-*platform*.yaml']
   push:
     branches: [main]
-    paths: ['config/mccp_publication.libsonnet', 'config/render.libsonnet', 'scripts/export_platform_dependencies.py', 'validation/**', '.github/workflows/oci-*platform*.yaml']
+    paths: ['config/mccp_publication.libsonnet', 'config/render.libsonnet', 'scripts/export_platform_dependencies.py', 'scripts/prepare_mccp_configuration.py', 'validation/**', '.github/workflows/oci-*platform*.yaml']
 permissions:
   contents: read
 jobs:
