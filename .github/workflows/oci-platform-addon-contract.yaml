@@ -1,0 +1,20 @@
+name: MCCP platform integration contracts
+on:
+  pull_request:
+    paths: ['config/mccp_publication.libsonnet', 'config/render.libsonnet', 'scripts/export_platform_dependencies.py', 'validation/**', '.github/workflows/oci-*platform*.yaml']
+  push:
+    branches: [main]
+    paths: ['config/mccp_publication.libsonnet', 'config/render.libsonnet', 'scripts/export_platform_dependencies.py', 'validation/**', '.github/workflows/oci-*platform*.yaml']
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Jsonnet
+        run: sudo apt-get update -qq && sudo apt-get install -y jsonnet
+      - name: Test optional publication and dependency boundaries
+        run: python3 -m unittest discover -s validation -v
