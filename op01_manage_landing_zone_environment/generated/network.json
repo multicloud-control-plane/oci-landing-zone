@@ -173,7 +173,8 @@
                               ],
                               "protocols": [
                                  "TLSv1.2"
-                              ]
+                              ],
+                              "verify_peer_certificate": false
                            }
                         }
                      },
