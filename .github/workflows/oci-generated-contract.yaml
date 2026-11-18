@@ -158,6 +158,25 @@ jobs:
             "$RUNNER_TEMP/render-config/customer.jsonnet"
           cp "$GITHUB_WORKSPACE/request/config/projects.json" \
             "$RUNNER_TEMP/render-config/projects.json"
+          python3 - "$GITHUB_WORKSPACE/trusted" "$RUNNER_TEMP/render-config" <<'PYVAULT'
+          import json, sys
+          from pathlib import Path
+          trusted, rendered = map(Path, sys.argv[1:])
+          sys.path.insert(0, str(trusted / 'scripts'))
+          from workload_vault import validate_workload_vault
+          catalog = json.loads((rendered / 'projects.json').read_text())
+          contract = json.loads((trusted / '.github/project-onboarding-contract.json').read_text())
+          if contract.get('contract_version') != 6:
+              raise SystemExit('Onboarding contract 6 is required.')
+          refs = {}
+          for environment, projects in catalog.items():
+              if projects:
+                  blueprint = json.loads((trusted / contract['environment_blueprints'][environment]).read_text())
+                  if blueprint.get('environment') != environment:
+                      raise SystemExit('Incompatible protected environment blueprint.')
+                  refs[environment] = validate_workload_vault(blueprint)
+          (rendered / 'workload_vaults.json').write_text(json.dumps(refs))
+          PYVAULT
           mapfile -t environments < <(
             cd "$RUNNER_TEMP/render-config"
             jsonnet -e '
