@@ -107,9 +107,45 @@
                            },
                            "name": "lbbkst-fra-lz-dev-02",
                            "policy": "ROUND_ROBIN"
+                        },
+                        "MCCP-BACKEND-KEY": {
+                           "backends": {
+                              "MCCP-ADB-KEY": {
+                                 "ip_address": "10.200.8.29",
+                                 "port": 443
+                              }
+                           },
+                           "health_checker": {
+                              "interval_ms": 10000,
+                              "is_force_plain_text": false,
+                              "port": 443,
+                              "protocol": "HTTP",
+                              "retries": 3,
+                              "return_code": 302,
+                              "timeout_in_millis": 3000,
+                              "url_path": "/ords/"
+                           },
+                           "name": "mccp-adb",
+                           "policy": "ROUND_ROBIN",
+                           "ssl_configuration": {
+                              "protocols": [
+                                 "TLSv1.2"
+                              ],
+                              "trusted_certificate_authority_ids": [
+                                 "ocid1.cabundle.oc1.eu-frankfurt-1.amaaaaaa2vk6mfaaohzv75ofvceo5jgvvj2eckzjb67lukxjqhviovblm2mq"
+                              ],
+                              "verify_depth": 5,
+                              "verify_peer_certificate": true
+                           }
                         }
                      },
                      "display_name": "lb-fra-lz-dev-01",
+                     "host_names": {
+                        "MCCP-HOSTNAME-KEY": {
+                           "hostname": "apex-mccp.duckdns.org",
+                           "name": "mccp"
+                        }
+                     },
                      "ip_mode": "IPV4",
                      "is_private": false,
                      "listeners": {
@@ -122,6 +158,23 @@
                            "port": "80",
                            "protocol": "HTTP",
                            "routing_policy_key": "LBRT-FRA-LZ-DEV-01-KEY"
+                        },
+                        "MCCP-HTTPS-KEY": {
+                           "default_backend_set_key": "MCCP-BACKEND-KEY",
+                           "hostname_keys": [
+                              "MCCP-HOSTNAME-KEY"
+                           ],
+                           "name": "mccp-https",
+                           "port": "443",
+                           "protocol": "HTTP",
+                           "ssl_configuration": {
+                              "certificate_ids": [
+                                 "ocid1.certificate.oc1.eu-frankfurt-1.amaaaaaa2vk6mfaafml32h3xod6w4dcc4jsxcxa7fzcpyqkdfklnhd6xge3a"
+                              ],
+                              "protocols": [
+                                 "TLSv1.2"
+                              ]
+                           }
                         }
                      },
                      "network_security_group_keys": [
@@ -221,6 +274,12 @@
                      "RT-FRA-LZ-HUB-LB-KEY": {
                         "display_name": "rt-fra-lz-hub-lb",
                         "route_rules": {
+                           "mccp-platform": {
+                              "description": "Route to the MCCP platform through the shared DRG",
+                              "destination": "10.200.8.0/24",
+                              "destination_type": "CIDR_BLOCK",
+                              "network_entity_key": "DRG-FRA-LZ-HUB-KEY"
+                           },
                            "rr-fra-dev-projects": {
                               "description": "Route to VCN Dev Projects through DRG",
                               "destination": "10.200.64.0/21",
@@ -238,6 +297,12 @@
                      "RT-FRA-LZ-HUB-MGMT-KEY": {
                         "display_name": "rt-fra-lz-hub-mgmt",
                         "route_rules": {
+                           "mccp-platform": {
+                              "description": "Route to the MCCP platform through the shared DRG",
+                              "destination": "10.200.8.0/24",
+                              "destination_type": "CIDR_BLOCK",
+                              "network_entity_key": "DRG-FRA-LZ-HUB-KEY"
+                           },
                            "rr-fra-dev-projects": {
                               "description": "Route to VCN Dev Projects through DRG",
                               "destination": "10.200.64.0/21",
