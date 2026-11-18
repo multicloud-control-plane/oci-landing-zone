@@ -5,6 +5,7 @@
 // adapter only separates those definitions along the product's established
 // state and ownership boundaries.
 local lz = import 'landing_zone.libsonnet';
+local mccp_publication = import 'mccp_publication.libsonnet';
 local publication_network = import 'lib/publication_network.libsonnet';
 local render_context = import 'render_context.libsonnet';
 local project_catalog = import 'projects.json';
@@ -531,7 +532,16 @@ local render(customer) =
         },
       },
     'op01_manage_landing_zone_environment/generated/network.json':
-      op01_network,
+      mccp_publication.apply(
+        op01_network,
+        if std.objectHas(customer, 'mccp_publication') then customer.mccp_publication else null,
+        hub_vcn_key,
+        drg_key,
+        [config.hub.network.vcn] + [
+          config.environments[name].shared_project_network.network.vcn
+          for name in environment_names
+        ],
+      ),
     'op01_manage_landing_zone_environment/generated/observability_cis1_pre.json':
       fixed_observability(active_render.observability_cis1_pre),
     'op01_manage_landing_zone_environment/generated/observability_cis1.json':

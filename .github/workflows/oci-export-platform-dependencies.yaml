@@ -1,0 +1,29 @@
+name: Export MCCP foundation references
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mccp-foundation-dependency-export
+  cancel-in-progress: false
+jobs:
+  export:
+    if: github.ref == 'refs/heads/main' && vars.FOUNDATION_AUTOMATION_READY == 'true'
+    runs-on: ${{ fromJSON(vars.FOUNDATION_RUNNER_LABELS || '["self-hosted"]') }}
+    environment: mccp-foundation-export
+    timeout-minutes: 15
+    env:
+      OCI_TENANCY_OCID: ${{ vars.OCI_TENANCY_OCID }}
+      REGION: ${{ vars.REGION }}
+      OCI_TF_STATE_NAMESPACE: ${{ vars.OCI_TF_STATE_NAMESPACE }}
+      OCI_TF_STATE_BUCKET: ${{ vars.OCI_TF_STATE_BUCKET }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@v4.0.1
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+      - name: Export only official dependency references
+        run: python3 scripts/export_platform_dependencies.py

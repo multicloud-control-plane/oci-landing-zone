@@ -84,3 +84,7 @@ contains credentials.
 
 Copyright (c) 2026 Oracle and/or its affiliates. Licensed under the Universal
 Permissive License, Version 1.0. See [LICENSE](LICENSE).
+
+## Optional MCCP application platform
+
+Deploy the private ADB workload from [apex-mccp-platform](https://github.com/multicloud-control-plane/apex-mccp-platform). This foundation retains ownership of the shared public LB. See [MCCP integration](docs/mccp-platform.md) for the optional publication and sanitized dependency export. The integration is disabled unless explicitly configured; APEX application installation remains manual.

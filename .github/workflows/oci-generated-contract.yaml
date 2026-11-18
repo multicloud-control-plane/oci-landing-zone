@@ -152,6 +152,8 @@ jobs:
             "$RUNNER_TEMP/render-config/render.libsonnet"
           cp "$GITHUB_WORKSPACE/trusted/config/tbac.libsonnet" \
             "$RUNNER_TEMP/render-config/tbac.libsonnet"
+          cp "$GITHUB_WORKSPACE/trusted/config/mccp_publication.libsonnet" \
+            "$RUNNER_TEMP/render-config/mccp_publication.libsonnet"
           cp "$GITHUB_WORKSPACE/request/config/customer.jsonnet" \
             "$RUNNER_TEMP/render-config/customer.jsonnet"
           cp "$GITHUB_WORKSPACE/request/config/projects.json" \
